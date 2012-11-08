@@ -32,12 +32,12 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
           connectors {
             file {
               description = "file system"
-              factory-class = "org.mashupbots.plebify.fileConnector"
+              class-name = "org.mashupbots.plebify.fileConnector"
               param1 = "a"
             }
     
             http {
-              factory-class = "org.mashupbots.plebify.httpConnector"
+              class-name = "org.mashupbots.plebify.httpConnector"
               param1 = "a"
               param2 = "b"
             }
@@ -95,7 +95,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
 
       val fileConnector = cfg.connectors("file")
       fileConnector.id should equal("file")
-      fileConnector.factoryClass should equal("org.mashupbots.plebify.fileConnector")
+      fileConnector.className should equal("org.mashupbots.plebify.fileConnector")
       fileConnector.description should equal("file system")
       fileConnector.params.size should equal(1)
       fileConnector.params("param1") should equal("a")
@@ -103,7 +103,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       val httpConnector = cfg.connectors("http")
       httpConnector.id should equal("http")
       httpConnector.description should equal("")
-      httpConnector.factoryClass should equal("org.mashupbots.plebify.httpConnector")
+      httpConnector.className should equal("org.mashupbots.plebify.httpConnector")
       httpConnector.params.size should equal(2)
       httpConnector.params("param1") should equal("a")
       httpConnector.params("param2") should equal("b")
