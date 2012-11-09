@@ -16,11 +16,9 @@
 package org.mashupbots.plebify.core
 
 /**
- * A `JobBoss` sets up triggers and waits for them to fire a [[org.mashupbots.plebify.core.TiggerMessage]]. When one
- * is received, it creates a [[org.mashupbots.plebify.core.JobWorker]] to do the processing.
- * 
- * 
+ * A `Job` sets up triggers and waits for them to fire a [[org.mashupbots.plebify.core.TiggerMessage]]. When one
+ * fires, the job creates a [[org.mashupbots.plebify.core.JobWorker]] to perform the required actions.
  */
-class JobBoss {
+class Job {
 
 }
