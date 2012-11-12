@@ -24,14 +24,14 @@ import scala.collection.JavaConversions._
  *
  * @param id Unique id of this job
  * @param description Description of this job
- * @param triggers Collection of triggers that will cause this job to run
- * @param actions Work to be performed by this job
+ * @param events Collection of events to which this job is subscribed. When an event is fired, the tasks are executed
+ * @param tasks Work to be performed by this job
  */
 case class JobConfig(
   id: String,
   description: String,
-  triggers: Map[String, TriggerConfig],
-  actions: Map[String, ActionConfig]) extends Extension {
+  events: Map[String, EventConfig],
+  tasks: Map[String, TaskConfig]) extends Extension {
 
   /**
    * Read configuration from AKKA's `application.conf`
@@ -43,39 +43,39 @@ case class JobConfig(
   def this(id: String, config: Config, keyPath: String) = this(
     id,
     ConfigUtil.getString(config, s"$keyPath.description", ""),
-    JobConfig.loadTriggers(config, s"$keyPath.on"),
-    JobConfig.loadActions(config, s"$keyPath.do"))
+    JobConfig.loadEvents(config, s"$keyPath.on"),
+    JobConfig.loadTasks(config, s"$keyPath.do"))
 
 }
 
 object JobConfig {
 
   /**
-   * Load triggers from the configuration file
+   * Load events that will trigger the running of this job
    *
    * Note that trigger id forms the key. This implicitly means that a trigger id must be unique
    *
    * @param config Configuration
    * @param keyPath Dot delimited key path to the trigger configuration
    */
-  def loadTriggers(config: Config, keyPath: String): Map[String, TriggerConfig] = {
-    val triggers = config.getObject(keyPath)
-    (for (id <- triggers.keySet())
-      yield (id, new TriggerConfig(id, config, s"$keyPath.$id"))).toMap
+  def loadEvents(config: Config, keyPath: String): Map[String, EventConfig] = {
+    val events = config.getObject(keyPath)
+    (for (id <- events.keySet())
+      yield (id, new EventConfig(id, config, s"$keyPath.$id"))).toMap
   }
 
   /**
-   * Load actions from the configuration file
+   * Load the tasks that will be run when a subscribed event is fired
    *
    * Note that action id forms the key. This implicitly means that an action id must be unique
    *
    * @param config Configuration
    * @param keyPath Dot delimited key path to the action configuration
    */
-  def loadActions(config: Config, keyPath: String): Map[String, ActionConfig] = {
-    val actions = config.getObject(keyPath)
-    (for (id <- actions.keySet())
-      yield (id, new ActionConfig(id, config, s"$keyPath.$id"))).toMap
+  def loadTasks(config: Config, keyPath: String): Map[String, TaskConfig] = {
+    val tasks = config.getObject(keyPath)
+    (for (id <- tasks.keySet())
+      yield (id, new TaskConfig(id, config, s"$keyPath.$id"))).toMap
   }
 
 }

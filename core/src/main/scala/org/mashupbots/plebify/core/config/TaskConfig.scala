@@ -19,15 +19,15 @@ import akka.actor.Extension
 import com.typesafe.config.Config
 
 /**
- * Action configuration
+ * Task configuration
  *
- * An action is perform when an event sets off a trigger
+ * A task is perform by a job when an event to which the job is subscribed fires 
  *
- * @param id Unique id of this trigger. Must be in the format `{connector id}-{action}[-optional-text]`.
- * @param description Description of this action
- * @param params Parameters for this action
+ * @param id Unique id of this task. Must be in the format `{connector id}-{task}[-optional-text]`.
+ * @param description Description of this task
+ * @param params Parameters for this task
  */
-case class ActionConfig(
+case class TaskConfig(
   id: String,
   description: String,
   params: Map[String, String]) extends Extension {
@@ -35,9 +35,9 @@ case class ActionConfig(
   /**
    * Read configuration from AKKA's `application.conf`
    *
-   * @param id Unique identifier of this action. Must be in the format `{connector id}-{action}[-optional-text]`.
+   * @param id Unique identifier of this task. Must be in the format `{connector id}-{task}[-optional-text]`.
    * @param config Configuration
-   * @param keyPath Dot delimited key path to this action configuration
+   * @param keyPath Dot delimited key path to this task configuration
    */
   def this(id: String, config: Config, keyPath: String) = this(
     id,
@@ -45,16 +45,16 @@ case class ActionConfig(
     ConfigUtil.getParameters(config, keyPath, List("description")))
 
   private val splitId = id.split("-")
-  require(splitId.length >= 2, s"Action id '$id' must be in the format 'connector-action'")
+  require(splitId.length >= 2, s"task id '$id' must be in the format 'connector-task'")
 
   /**
-   * Id of the connector that will perform the action
+   * Id of the connector that will perform the task
    */
   val connectorId = splitId(0)
 
   /**
-   * Id of the action in the connector to perform
+   * Id of the connector task that is to be performed
    */
-  val actionId = splitId(1)
+  val taskId = splitId(1)
 
 }

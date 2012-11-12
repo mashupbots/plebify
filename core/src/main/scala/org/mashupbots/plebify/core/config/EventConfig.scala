@@ -19,15 +19,13 @@ import akka.actor.Extension
 import com.typesafe.config.Config
 
 /**
- * Trigger configuration
- *
- * A trigger is a listener for events
- *
- * @param id Unique id of this trigger. Must be in the format `{connector id}-{event}[-optional-text]`.
+ * Event subscription for a job. The job will be notified when this event fires.
+ * 
+ * @param id Unique id of this event. Must be in the format `{connector id}-{event}[-optional-text]`.
  * @param description Description of this trigger
  * @param params Parameters for this trigger
  */
-case class TriggerConfig(
+case class EventConfig(
   id: String,
   description: String,
   params: Map[String, String]) extends Extension {
@@ -35,7 +33,7 @@ case class TriggerConfig(
   /**
    * Read configuration from AKKA's `application.conf`
    *
-   * @param id Unique identifier of this trigger. Must be in the format `{connector id}-{event}[-optional-text]`.
+   * @param id Unique identifier of this event. Must be in the format `{connector id}-{event}[-optional-text]`.
    * @param config Configuration
    * @param keyPath Dot delimited key path to this trigger configuration
    */
@@ -53,8 +51,8 @@ case class TriggerConfig(
   val connectorId = splitId(0)
 
   /**
-   * Id of the trigger in the connector
+   * Id of the connector event to which to subscribe 
    */
-  val triggerId = splitId(1)
+  val eventId = splitId(1)
 
 }
