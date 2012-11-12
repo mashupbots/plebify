@@ -30,8 +30,8 @@ import scala.collection.JavaConversions._
 case class JobConfig(
   id: String,
   description: String,
-  events: Map[String, EventSubscriptionConfig],
-  tasks: Map[String, TaskExecutionConfig]) extends Extension {
+  events: Seq[EventSubscriptionConfig],
+  tasks: Seq[TaskExecutionConfig]) extends Extension {
 
   /**
    * Read configuration from AKKA's `application.conf`
@@ -46,41 +46,48 @@ case class JobConfig(
     JobConfig.loadEvents(config, s"$keyPath.on"),
     JobConfig.loadTasks(config, s"$keyPath.do"))
 
- /**
-  * Name of the actor representing this job
-  */
-  val actorName = s"plebify-job-$id"
-    
+  /**
+   * Name of the actor representing this job
+   */
+  val actorName = JobConfig.createActorName(id)
+
 }
 
 object JobConfig {
 
   /**
-   * Load events that will trigger the running of this job
+   * Returns the events that will trigger the running of this job
    *
    * Note that trigger id forms the key. This implicitly means that a trigger id must be unique
    *
    * @param config Configuration
    * @param keyPath Dot delimited key path to the trigger configuration
+   * @returns sequence of event subscription configuration
    */
-  def loadEvents(config: Config, keyPath: String): Map[String, EventSubscriptionConfig] = {
+  def loadEvents(config: Config, keyPath: String): Seq[EventSubscriptionConfig] = {
     val events = config.getObject(keyPath)
-    (for (id <- events.keySet())
-      yield (id, new EventSubscriptionConfig(id, config, s"$keyPath.$id"))).toMap
+    (for (id <- events.keySet()) yield new EventSubscriptionConfig(id, config, s"$keyPath.$id")).toSeq
   }
 
   /**
-   * Load the tasks that will be run when a subscribed event is fired
+   * Returns the tasks that will be executed when a subscribed event is fired
    *
    * Note that action id forms the key. This implicitly means that an action id must be unique
    *
    * @param config Configuration
    * @param keyPath Dot delimited key path to the action configuration
+   * @returns Sequence of task configuration
    */
-  def loadTasks(config: Config, keyPath: String): Map[String, TaskExecutionConfig] = {
+  def loadTasks(config: Config, keyPath: String): Seq[TaskExecutionConfig] = {
     val tasks = config.getObject(keyPath)
-    (for (id <- tasks.keySet())
-      yield (id, new TaskExecutionConfig(id, config, s"$keyPath.$id"))).toMap
+    (for (id <- tasks.keySet()) yield new TaskExecutionConfig(id, config, s"$keyPath.$id")).toSeq
   }
 
+  /**
+   * Returns a unique name for a job actor
+   *
+   * @param jobId Job id
+   * @returns Unique name for a job actor of the specified `id`.
+   */
+  def createActorName(jobId: String): String = s"plebify-job-$jobId"
 }

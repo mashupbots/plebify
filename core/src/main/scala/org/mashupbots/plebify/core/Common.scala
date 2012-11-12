@@ -35,3 +35,28 @@ trait ResultMessage {
   val isSuccess = error.isEmpty
 }
 
+/**
+ * State for use in a FSM
+ */
+sealed trait State
+
+/**
+ * FSM is not working
+ */
+case object Idle extends State
+
+/**
+ * FSM is working
+ */
+case object Active extends State
+
+/**
+ * Data for use with states in a FSM
+ */
+trait StateData
+
+/**
+ * No state data present
+ */
+case object Uninitialized extends StateData
+

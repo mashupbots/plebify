@@ -15,25 +15,27 @@
 //
 package org.mashupbots.plebify.core
 
+import org.mashupbots.plebify.core.config.ConnectorConfig
 import org.mashupbots.plebify.core.config.PlebifyConfig
 import akka.actor.Actor
-import akka.actor.ExtendedActorSystem
-import akka.actor.ExtensionId
-import akka.actor.ExtensionIdProvider
-import akka.event.Logging
-import org.mashupbots.plebify.core.config.ConnectorConfig
-import akka.actor.Props
 import akka.actor.PoisonPill
+import akka.actor.Props.apply
+import akka.actor.Props
 
 /**
- * The engine manages connectors and jobs.
+ * The Plebify engine manages connectors and jobs.
+ *
+ * The engine does not handle any messages. When you instance it, it starts.  When you send a `PoisonPill` or
+ * `Kill` message, it stops.
+ *
+ * @param configName Name of root Plebify element parsed in the AKKA config. Defaults to `plebify`.
  */
-class Engine extends Actor with akka.actor.ActorLogging {
+class Engine(val configName: String = "plebify") extends Actor with akka.actor.ActorLogging {
 
   /**
    * Plebify configuration
    */
-  val config: PlebifyConfig = EngineConfigReader(context.system)
+  val config: PlebifyConfig = new PlebifyConfig(context.system.settings.config, configName)
 
   /**
    * Start connectors and jobs
@@ -57,14 +59,13 @@ class Engine extends Actor with akka.actor.ActorLogging {
             case _: NoSuchMethodException => clazz.newInstance().asInstanceOf[Actor]
           }
         }
-        val connectorActor = context.system.actorOf(Props(instance), name = connectorConfig.actorName)
+        val connector = context.system.actorOf(Props(instance), name = connectorConfig.actorName)
       }
     }
 
     // Start jobs
     config.jobs.foreach {
       case (id, jobConfig) => {
-        log.info(s"  Starting job '$id'")
         val jobActor = context.system.actorOf(Props(new Job(jobConfig)), name = jobConfig.actorName)
       }
     }
@@ -74,10 +75,12 @@ class Engine extends Actor with akka.actor.ActorLogging {
    * In restarting the engine after an error, stop all children and ourself.
    */
   override def preRestart(reason: Throwable, message: Option[Any]) {
-    postStop()
-
-    // Just incase we cannot gracefully stop any actors, kill them
-    context.children.foreach(context.stop(_))
+    try {
+      postStop()
+    } finally {
+      // Just incase we cannot gracefully stop the children, kill them!
+      context.children.foreach(context.stop(_))
+    }
   }
 
   /**
@@ -117,13 +120,3 @@ class Engine extends Actor with akka.actor.ActorLogging {
 
 }
 
-/**
- * Extracts Plebify configuration from an actor system. The Plebify configuration must be under a root node named
- * `plebify`.
- *
- * See [[org.mashupbots.plebify.core.config.PlebifyConfig]].
- */
-object EngineConfigReader extends ExtensionId[PlebifyConfig] with ExtensionIdProvider {
-  override def lookup = EngineConfigReader
-  override def createExtension(system: ExtendedActorSystem) = new PlebifyConfig(system.settings.config, "plebify")
-}

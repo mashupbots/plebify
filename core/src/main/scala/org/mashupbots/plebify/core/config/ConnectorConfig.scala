@@ -45,9 +45,20 @@ case class ConnectorConfig(
     config.getString(s"$keyPath.class-name"),
     ConfigUtil.getParameters(config, keyPath, List("class-name", "description")))
 
- /**
-  * Name of the actor representing this connector
-  */
-  val actorName = s"plebify-connector-$id"
-    
+  /**
+   * Name of the actor representing this connector
+   */
+  val actorName = ConnectorConfig.createActorName(id)
+
+}
+
+object ConnectorConfig {
+
+  /**
+   * Returns a unique name for a connector actor
+   *
+   * @param connectorId Connector id
+   * @returns Unique name for a connector actor of the specified `id`.
+   */
+  def createActorName(connectorId: String): String = s"plebify-connector-$connectorId"
 }

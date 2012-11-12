@@ -114,7 +114,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       job1.events.size should equal(2)
       job1.tasks.size should equal(2)
 
-      val job1Event1 = job1.events("http-request")
+      val job1Event1 = job1.events.find(e => e.id == "http-request").get
       job1Event1.id should equal("http-request")
       job1Event1.connectorId should equal("http")
       job1Event1.eventName should equal("request")
@@ -122,14 +122,14 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       job1Event1.params.size should equal(1)
       job1Event1.params("param1") should equal("aaa")
 
-      val job1Event2 = job1.events("http-request-2")
+      val job1Event2 = job1.events.find(e => e.id == "http-request-2").get
       job1Event2.id should equal("http-request-2")
       job1Event2.connectorId should equal("http")
       job1Event2.eventName should equal("request")
       job1Event2.description should equal("")
       job1Event2.params.size should equal(0)
 
-      val job1Task1 = job1.tasks("file-save-1")
+      val job1Task1 = job1.tasks.find(t => t.id == "file-save-1").get
       job1Task1.id should equal("file-save-1")
       job1Task1.connectorId should equal("file")
       job1Task1.taskName should equal("save")
@@ -137,7 +137,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       job1Task1.params.size should equal(1)
       job1Task1.params("param1") should equal("111")
 
-      val job1Task2 = job1.tasks("file-save-2")
+      val job1Task2 = job1.tasks.find(t => t.id == "file-save-2").get
       job1Task2.id should equal("file-save-2")
       job1Task2.connectorId should equal("file")
       job1Task2.taskName should equal("save")

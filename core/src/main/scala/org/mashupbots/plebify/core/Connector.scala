@@ -34,29 +34,55 @@ trait ConnectorMessage
  *
  * Upon successful subscription, [[org.mashupbots.plebify.core.EventNotification]] messages will be sent to the
  * specified job every time an event fires.
- * 
- * The success or failure of subscription is returned to the sender in 
- * [[org.mashupbots.plebify.core.EventSubsriptionResult]]. 
+ *
+ * The success or failure of subscription is returned to the sender in
+ * [[org.mashupbots.plebify.core.EventSubsriptionResult]].
  *
  * @param job Actor to which [[org.mashupbots.plebify.core.EventNotification]] will be sent when the event fires
  * @param config Event subscription configuration
  */
-case class EventSubsription(job: ActorRef, config: EventSubscriptionConfig) extends ConnectorMessage
+case class EventSubscription(job: ActorRef, config: EventSubscriptionConfig) extends ConnectorMessage
 
 /**
  * The result of an event subscription.
- * 
+ *
  * This message is sent from a connector to the job that sent the [[org.mashupbots.plebify.core.EventSubsription]]
+ * message.
  *
  * @param error Optional error
  */
-case class EventSubsriptionResult(error: Option[Throwable] = None) extends ConnectorMessage with ResultMessage
+case class EventSubscriptionResult(error: Option[Throwable] = None) extends ConnectorMessage with ResultMessage
 
 /**
- * Notification that an event has occurred. 
- * 
- * This message is sent from a connector to a job that has subscribed to the event on the connector. 
- * 
+ * Cancels a job's subscription to the specified event
+ *
+ * Upon successful cancellation, [[org.mashupbots.plebify.core.EventNotification]] messages will '''NOT''' be sent to 
+ * the specified job every time an event fires.
+ *
+ * The success or failure of cancellation is returned to the sender in
+ * [[org.mashupbots.plebify.core.EventSubscriptionCancellationResult]].
+ *
+ * @param job Actor to which [[org.mashupbots.plebify.core.EventNotification]] was sent when the event fires
+ * @param config Event subscription configuration
+ */
+case class EventSubscriptionCancellation(job: ActorRef, config: EventSubscriptionConfig) extends ConnectorMessage
+
+/**
+ * The result of a cancellation of an event subscription.
+ *
+ * This message is sent from a connector to the job that sent the
+ * [[org.mashupbots.plebify.core.EventSubscriptionCancellation]] message.
+ *
+ * @param error Optional error
+ */
+case class EventSubscriptionCancellationResult(error: Option[Throwable] = None) extends ConnectorMessage
+  with ResultMessage
+
+/**
+ * Notification that an event has occurred.
+ *
+ * This message is sent from a connector to a job that has subscribed to the event on the connector.
+ *
  * @param eventSubscriptionId Identifier of the event
  * @param data Data associated with the event
  */
@@ -65,18 +91,18 @@ case class EventNotification(eventSubscriptionId: String, data: Map[String, Stri
 /**
  * Executes the specified task
  *
- * This message is sent form a job to 
- * The success or failure of execution is returned to the sender in [[org.mashupbots.plebify.core.TaskExecutionResult]]. 
+ * This message is sent form a [[org.mashupbots.plebify.core.JobWorker]] to a connector. The success or failure of 
+ * execution is returned to the job in [[org.mashupbots.plebify.core.TaskExecutionResult]].
  *
- * @param job Actor to which [[org.mashupbots.plebify.core.EventNotification]] will be sent when the event fires
  * @param config Task execution configuration detailing how the task is to be run
  */
-case class TaskExecution(job: ActorRef, config: TaskExecutionConfig) extends ConnectorMessage
+case class TaskExecution(config: TaskExecutionConfig) extends ConnectorMessage
 
 /**
- * The result of running a task
- * 
- * This message is sent from a connector to the job that sent the [[org.mashupbots.plebify.core.TaskExecution]]
+ * The result of executing a task.
+ *
+ * This message is sent from a connector to the [[org.mashupbots.plebify.core.JobWorker]] that sent the 
+ * [[org.mashupbots.plebify.core.TaskExecution]] message.
  *
  * @param error Optional error
  */
