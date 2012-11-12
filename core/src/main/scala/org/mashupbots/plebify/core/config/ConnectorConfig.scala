@@ -45,4 +45,9 @@ case class ConnectorConfig(
     config.getString(s"$keyPath.class-name"),
     ConfigUtil.getParameters(config, keyPath, List("class-name", "description")))
 
+ /**
+  * Name of the actor representing this connector
+  */
+  val actorName = s"plebify-connector-$id"
+    
 }

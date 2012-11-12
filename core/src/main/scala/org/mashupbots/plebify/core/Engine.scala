@@ -16,56 +16,109 @@
 package org.mashupbots.plebify.core
 
 import org.mashupbots.plebify.core.config.PlebifyConfig
-
 import akka.actor.Actor
 import akka.actor.ExtendedActorSystem
 import akka.actor.ExtensionId
 import akka.actor.ExtensionIdProvider
+import akka.event.Logging
+import org.mashupbots.plebify.core.config.ConnectorConfig
+import akka.actor.Props
+import akka.actor.PoisonPill
 
 /**
  * The engine manages connectors and jobs.
  */
-class Engine extends Actor {
+class Engine extends Actor with akka.actor.ActorLogging {
 
   /**
    * Plebify configuration
    */
   val config: PlebifyConfig = EngineConfigReader(context.system)
-  
-  def receive = {
-    case x =>
-  }
-  
 
-  //  /**
-  //   * Plebify configuration
-  //   */
-  //  val config: PlebifyConfig = EngineConfigReader(context)
-  //
-  //  val connectors: Map[String, Connector] = {
-  //
-  //    def instanceConnector(connectorConfig: ConnectorConfig): Connector = {
-  //      val classLoader = Thread.currentThread.getContextClassLoader
-  //      val clazz = classLoader.loadClass(connectorConfig.className)
-  //      val constructor = clazz.getConstructor(classOf[ActorSystem], classOf[ConnectorConfig])
-  //      constructor.newInstance(system, connectorConfig).asInstanceOf[Connector]
-  //    }
-  //
-  //    config.connectors.map { case (k, v) => (k, instanceConnector(v)) }
-  //  }
-  //  
-  //  /**
-  //   * Stops this engine.
-  //   *
-  //   * Terminates kills all connector and job actors.
-  //   */
-  //  def shutdown() {
-  //
-  //  }
+  /**
+   * Start connectors and jobs
+   */
+  override def preStart() {
+    log.info("Plebify Engine starting...")
+
+    // Start connectors
+    config.connectors.foreach {
+      case (id, connectorConfig) => {
+        log.info(s"  Starting connector '$id'")
+
+        // Try to instance with config argument. If class does not take config parameter, default constructor
+        // will be called
+        val clazz = Class.forName(connectorConfig.className)
+        val instance: Actor = {
+          try {
+            val constructor = clazz.getConstructor(classOf[ConnectorConfig])
+            constructor.newInstance(connectorConfig).asInstanceOf[Actor]
+          } catch {
+            case _: NoSuchMethodException => clazz.newInstance().asInstanceOf[Actor]
+          }
+        }
+        val connectorActor = context.system.actorOf(Props(instance), name = connectorConfig.actorName)
+      }
+    }
+
+    // Start jobs
+    config.jobs.foreach {
+      case (id, jobConfig) => {
+        log.info(s"  Starting job '$id'")
+        val jobActor = context.system.actorOf(Props(new Job(jobConfig)), name = jobConfig.actorName)
+      }
+    }
+  }
+
+  /**
+   * In restarting the engine after an error, stop all children and ourself.
+   */
+  override def preRestart(reason: Throwable, message: Option[Any]) {
+    postStop()
+
+    // Just incase we cannot gracefully stop any actors, kill them
+    context.children.foreach(context.stop(_))
+  }
+
+  /**
+   * After stopping all children and ourself in `preRestart`, start up again.
+   */
+  override def postRestart(reason: Throwable) {
+    preStart()
+  }
+
+  /**
+   * Stop connectors and jobs
+   */
+  override def postStop() {
+    log.info("Plebify Engine stopping...")
+
+    // Stop jobs
+    config.jobs.foreach {
+      case (id, jobConfig) => {
+        context.actorFor(jobConfig.actorName) ! PoisonPill
+      }
+    }
+
+    // Stop connectors
+    config.connectors.foreach {
+      case (id, connectorConfig) => {
+        context.actorFor(connectorConfig.actorName) ! PoisonPill
+      }
+    }
+  }
+
+  /**
+   * The engine does not handle any messages.
+   */
+  def receive = {
+    case x => throw new Error(s"Unrecognised message${x.toString}")
+  }
+
 }
 
 /**
- * Extracts plebify configuration from an actor system. The plebify configuration must be under a root node named
+ * Extracts Plebify configuration from an actor system. The Plebify configuration must be under a root node named
  * `plebify`.
  *
  * See [[org.mashupbots.plebify.core.config.PlebifyConfig]].

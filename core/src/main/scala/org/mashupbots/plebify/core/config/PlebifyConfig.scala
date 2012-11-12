@@ -86,23 +86,6 @@ case class PlebifyConfig(
 
     // Make sure we have jobs defined
     require(jobs.size > 0, "No 'jobs' defined.")
-
-//    // Make sure jobs correctly identify connectors, events and actions
-//    jobs.foreach {
-//      case (key, job) => {
-//        job.triggers.foreach {
-//          case (key, trigger) => require(connectors.contains(trigger.connectorId),
-//            s"Unrecognised connector '${trigger.connectorId}' in job '${job.id}' trigger '${trigger.id}'")
-//        }
-//        
-//        job.actions.foreach {
-//          case (key, action) => require(connectors.contains(action.connectorId),
-//            s"Unrecognised connector '${action.connectorId}' in job '${job.id}' action '${action.id}'")
-//        }
-//        
-//      }
-//    }
-
   }
 
   validate();

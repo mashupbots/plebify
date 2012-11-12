@@ -19,15 +19,15 @@ import akka.actor.Extension
 import com.typesafe.config.Config
 
 /**
- * Task configuration
- *
- * A task is perform by a job when an event to which the job is subscribed fires 
- *
- * @param id Unique id of this task. Must be in the format `{connector id}-{task}[-optional-text]`.
- * @param description Description of this task
- * @param params Parameters for this task
+ * Event subscription configuration for a job. 
+ * 
+ * Details the condition that a notification will be sent to the specified job when this event fires.
+ * 
+ * @param id Unique id of this event subscription. Must be in the format `{connector id}-{event}[-optional-text]`.
+ * @param description Description of this event subscription
+ * @param params Parameters for this event subscription
  */
-case class TaskConfig(
+case class EventSubscriptionConfig(
   id: String,
   description: String,
   params: Map[String, String]) extends Extension {
@@ -35,9 +35,10 @@ case class TaskConfig(
   /**
    * Read configuration from AKKA's `application.conf`
    *
-   * @param id Unique identifier of this task. Must be in the format `{connector id}-{task}[-optional-text]`.
-   * @param config Configuration
-   * @param keyPath Dot delimited key path to this task configuration
+   * @param id Unique identifier of this event subscription. Must be in the format 
+   *   `{connector id}-{event}[-optional-text]`.
+   * @param config Raw akka configuration
+   * @param keyPath Dot delimited key path to this trigger configuration
    */
   def this(id: String, config: Config, keyPath: String) = this(
     id,
@@ -45,16 +46,16 @@ case class TaskConfig(
     ConfigUtil.getParameters(config, keyPath, List("description")))
 
   private val splitId = id.split("-")
-  require(splitId.length >= 2, s"task id '$id' must be in the format 'connector-task'")
+  require(splitId.length >= 2, s"job id '$id' must be in the format 'connector-event'")
 
   /**
-   * Id of the connector that will perform the task
+   * Id of the connector to listen to
    */
   val connectorId = splitId(0)
 
   /**
-   * Id of the connector task that is to be performed
+   * Name of the connector event to which to subscribe 
    */
-  val taskId = splitId(1)
+  val eventName = splitId(1)
 
 }

@@ -30,8 +30,8 @@ import scala.collection.JavaConversions._
 case class JobConfig(
   id: String,
   description: String,
-  events: Map[String, EventConfig],
-  tasks: Map[String, TaskConfig]) extends Extension {
+  events: Map[String, EventSubscriptionConfig],
+  tasks: Map[String, TaskExecutionConfig]) extends Extension {
 
   /**
    * Read configuration from AKKA's `application.conf`
@@ -46,6 +46,11 @@ case class JobConfig(
     JobConfig.loadEvents(config, s"$keyPath.on"),
     JobConfig.loadTasks(config, s"$keyPath.do"))
 
+ /**
+  * Name of the actor representing this job
+  */
+  val actorName = s"plebify-job-$id"
+    
 }
 
 object JobConfig {
@@ -58,10 +63,10 @@ object JobConfig {
    * @param config Configuration
    * @param keyPath Dot delimited key path to the trigger configuration
    */
-  def loadEvents(config: Config, keyPath: String): Map[String, EventConfig] = {
+  def loadEvents(config: Config, keyPath: String): Map[String, EventSubscriptionConfig] = {
     val events = config.getObject(keyPath)
     (for (id <- events.keySet())
-      yield (id, new EventConfig(id, config, s"$keyPath.$id"))).toMap
+      yield (id, new EventSubscriptionConfig(id, config, s"$keyPath.$id"))).toMap
   }
 
   /**
@@ -72,10 +77,10 @@ object JobConfig {
    * @param config Configuration
    * @param keyPath Dot delimited key path to the action configuration
    */
-  def loadTasks(config: Config, keyPath: String): Map[String, TaskConfig] = {
+  def loadTasks(config: Config, keyPath: String): Map[String, TaskExecutionConfig] = {
     val tasks = config.getObject(keyPath)
     (for (id <- tasks.keySet())
-      yield (id, new TaskConfig(id, config, s"$keyPath.$id"))).toMap
+      yield (id, new TaskExecutionConfig(id, config, s"$keyPath.$id"))).toMap
   }
 
 }

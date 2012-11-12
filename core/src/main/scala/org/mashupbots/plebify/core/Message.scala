@@ -15,16 +15,23 @@
 //
 package org.mashupbots.plebify.core
 
-import akka.actor.Actor
-import org.mashupbots.plebify.core.config.JobConfig
+import org.mashupbots.plebify.core.config.EventSubscriptionConfig
+
+import akka.actor.ActorRef
 
 /**
- * A job waits for connector events to fire and executing tasks.
+ * Result of processing
  */
-class Job(val config: JobConfig) extends Actor {
+trait ResultMessage {
 
-  def receive = {
-    case x =>
-  }
+  /**
+   * Error (if any)
+   */
+  def error: Option[Throwable]
+
+  /**
+   * True if success, false if error.
+   */
+  val isSuccess = error.isEmpty
 }
 
