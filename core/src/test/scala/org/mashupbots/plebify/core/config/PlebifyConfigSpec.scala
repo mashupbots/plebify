@@ -15,15 +15,18 @@
 //
 package org.mashupbots.plebify.core.config
 
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.GivenWhenThen
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
-import org.scalatest.GivenWhenThen
-import org.scalatest.BeforeAndAfterAll
-import akka.actor.ActorSystem
+
 import com.typesafe.config.ConfigFactory
+
+import Test1Config.apply
+import akka.actor.ActorSystem
+import akka.actor.ExtendedActorSystem
 import akka.actor.ExtensionId
 import akka.actor.ExtensionIdProvider
-import akka.actor.ExtendedActorSystem
 
 class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfterAll {
 
@@ -32,12 +35,12 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
           connectors {
             file {
               description = "file system"
-              class-name = "org.mashupbots.plebify.fileConnector"
+              factory-class-name = "org.mashupbots.plebify.fileConnector"
               param1 = "a"
             }
     
             http {
-              class-name = "org.mashupbots.plebify.httpConnector"
+              factory-class-name = "org.mashupbots.plebify.httpConnector"
               param1 = "a"
               param2 = "b"
             }
@@ -80,8 +83,6 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
 		      }
             }
           }
-    
-    
 		}"""
 
   val actorSystem = ActorSystem("PlebifyConfigSpec", ConfigFactory.parseString(actorConfig))
@@ -93,22 +94,22 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       cfg.connectors.size should equal(2)
       cfg.jobs.size should equal(2)
 
-      val fileConnector = cfg.connectors("file")
+      val fileConnector = cfg.connectors.find(e => e.id == "file").get
       fileConnector.id should equal("file")
-      fileConnector.className should equal("org.mashupbots.plebify.fileConnector")
+      fileConnector.factoryClassName should equal("org.mashupbots.plebify.fileConnector")
       fileConnector.description should equal("file system")
       fileConnector.params.size should equal(1)
       fileConnector.params("param1") should equal("a")
 
-      val httpConnector = cfg.connectors("http")
+      val httpConnector = cfg.connectors.find(e => e.id == "http").get
       httpConnector.id should equal("http")
       httpConnector.description should equal("")
-      httpConnector.className should equal("org.mashupbots.plebify.httpConnector")
+      httpConnector.factoryClassName should equal("org.mashupbots.plebify.httpConnector")
       httpConnector.params.size should equal(2)
       httpConnector.params("param1") should equal("a")
       httpConnector.params("param2") should equal("b")
 
-      val job1 = cfg.jobs("job1")
+      val job1 = cfg.jobs.find(e => e.id == "job1").get
       job1.id should equal("job1")
       job1.description should equal("this is the first job")
       job1.events.size should equal(2)
@@ -144,7 +145,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       job1Task2.description should equal("")
       job1Task2.params.size should equal(0)
 
-      val job2 = cfg.jobs("job2")
+      val job2 = cfg.jobs.find(e => e.id == "job2").get
       job2.id should equal("job2")
       job2.description should equal("")
 

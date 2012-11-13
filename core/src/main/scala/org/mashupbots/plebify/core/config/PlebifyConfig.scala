@@ -27,12 +27,14 @@ import scala.collection.JavaConversions._
  * plebify {
  *   connectors {
  *     file {
- *       factory-class = ""
+ *       description = ""
+ *       factory-class-name = ""
  *       param1 = ""
  *     }
  *
  *     http {
- *       factory-class = ""
+ *       description = ""
+ *       factory-class-name = ""
  *       param1 = ""
  *       param2 = ""
  *     }
@@ -64,8 +66,8 @@ import scala.collection.JavaConversions._
  * }}}
  */
 case class PlebifyConfig(
-  connectors: Map[String, ConnectorConfig],
-  jobs: Map[String, JobConfig]) extends Extension {
+  connectors: Seq[ConnectorConfig],
+  jobs: Seq[JobConfig]) extends Extension {
 
   /**
    * Read configuration from AKKA's `application.conf`
@@ -102,10 +104,10 @@ object PlebifyConfig {
    * @param config Configuration
    * @param keyPath Dot delimited key path to the connectors configuration
    */
-  def loadConnectors(config: Config, keyPath: String): Map[String, ConnectorConfig] = {
+  def loadConnectors(config: Config, keyPath: String): Seq[ConnectorConfig] = {
     val connectors = config.getObject(keyPath)
     (for (id <- connectors.keySet())
-      yield (id, new ConnectorConfig(id, config, s"$keyPath.$id"))).toMap
+      yield new ConnectorConfig(id, config, s"$keyPath.$id")).toSeq
   }
 
   /**
@@ -116,10 +118,10 @@ object PlebifyConfig {
    * @param config Configuration
    * @param keyPath Dot delimited key path to the jobs configuration
    */
-  def loadJobs(config: Config, keyPath: String): Map[String, JobConfig] = {
+  def loadJobs(config: Config, keyPath: String): Seq[JobConfig] = {
     val jobs = config.getObject(keyPath)
     (for (id <- jobs.keySet())
-      yield (id, new JobConfig(id, config, s"$keyPath.$id"))).toMap
+      yield new JobConfig(id, config, s"$keyPath.$id")).toSeq
   }
 
 }

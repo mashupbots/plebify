@@ -15,12 +15,23 @@
 //
 package org.mashupbots.plebify.core
 
+import scala.concurrent.duration._
+
+import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.mashupbots.plebify.core.config.JobConfig
+
 import akka.actor.Actor
 import akka.actor.FSM
-import org.mashupbots.plebify.core.config.JobConfig
-import org.mashupbots.plebify.core.config.ConnectorConfig
-import org.mashupbots.plebify.core.config.TaskExecutionConfig
-import scala.concurrent.duration._
+
+/**
+ * FSM states for [[org.mashupbots.plebify.core.JobWorker]]
+ */
+sealed trait JobWorkerState
+
+/**
+ * FSM data for [[org.mashupbots.plebify.core.JobWorker]]
+ */
+trait JobWorkerData
 
 /**
  * Worker actor used to process an instance of a [[org.mashupbots.plebify.core.TriggerMessage]].
@@ -28,26 +39,76 @@ import scala.concurrent.duration._
  * The `JobWorker` is created by the boss [[org.mashupbots.plebify.core.Job]] actor.  Once processing
  * is finished, the `JobWorker` terminates.
  */
-class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends Actor with FSM[State, StateData]
-  with akka.actor.ActorLogging {
+class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends Actor
+  with FSM[JobWorkerState, JobWorkerData] with akka.actor.ActorLogging {
 
-  log.info(s"Running job '${jobConfig.id}' in actor '${context.self.path.toString}'")
+  //*******************************************************************************************************************
+  // State
+  //*******************************************************************************************************************
+  /**
+   * Job worker has just started and not doing any work
+   */
+  case object Idle extends JobWorkerState
 
+  /**
+   * Job worker has started and is executing tasks
+   */
+  case object Active extends JobWorkerState
+
+  //*******************************************************************************************************************
+  // Data
+  //*******************************************************************************************************************
+  /**
+   * No state data present
+   */
+  case object Uninitialized extends JobWorkerData
+
+  /**
+   * Details the progress of job execution; i.e. which task is being executed.
+   *
+   *  @param idx Index of the current task being executed
+   */
+  case class Progress(idx: Int, jobConfig: JobConfig) extends JobWorkerData {
+
+    /**
+     * True if we have finished processing and there are no more tasks to execute
+     */
+    val isFinished: Boolean = idx >= jobConfig.tasks.size
+
+    /**
+     * Current task execution configuration to run
+     */
+    val currentTask = jobConfig.tasks(idx)
+
+    /**
+     * Generic error message to identify this task
+     */
+    val errorMsg = s"Error executing task '${currentTask.taskName}' in connector '${currentTask.connectorId}' " +
+      s"for job '${jobConfig.id}'. "
+  }
+
+  //*******************************************************************************************************************
+  // Transitions
+  //*******************************************************************************************************************
   startWith(Idle, Uninitialized)
 
   when(Idle) {
-    case Event(ExecuteTasks, Uninitialized) => {
-      val progress = JobProgress(0, jobConfig)
+    case Event(Start, Uninitialized) => {
+      log.info(s"Executing tasks for job '${jobConfig.id}'")
+      
+      val progress = Progress(0, jobConfig)
       executeTask(progress)
       goto(Active) using progress forMax (5 seconds)
+    }
+
+    case Event(Stop, progress: Progress) => {
+      stop(FSM.Failure("Processing interruped by Stop message"), Uninitialized)
     }
   }
 
   when(Active) {
-    /**
-     * When we get result from the execution of the current task, process it and move to next task
-     */
-    case Event(result: TaskExecutionResult, progress: JobProgress) => {
+    // When we get result from the execution of the current task, process it and move to next task
+    case Event(result: TaskExecutionResponse, progress: Progress) => {
       // Post task execution processing
       if (!result.isSuccess) {
         // TODO - configuration options for error handling. Just log for now
@@ -65,19 +126,23 @@ class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends 
       }
     }
 
-    case Event(StateTimeout, progress: JobProgress) => {
+    case Event(StateTimeout, progress: Progress) => {
       stop(FSM.Failure("Connector timed out"), Uninitialized)
+    }
+
+    case Event(Stop, progress: Progress) => {
+      stop(FSM.Failure("Processing interruped by Stop message"), Uninitialized)
     }
   }
 
   onTermination {
     case StopEvent(FSM.Normal, state, data) =>
-      log.info(s"Finished job '${jobConfig.id}'")
+      log.info(s"Task execution for job '${jobConfig.id}' finished")
 
     case StopEvent(FSM.Shutdown, state, data) =>
-      log.info(s"Shutting down job '${jobConfig.id}'")
+      log.info(s"Shutting down task execution job '${jobConfig.id}'")
 
-    case StopEvent(FSM.Failure(cause: String), state, progress: JobProgress) =>
+    case StopEvent(FSM.Failure(cause: String), state, progress: Progress) =>
       log.error(progress.errorMsg + cause)
   }
 
@@ -86,53 +151,24 @@ class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends 
    *
    * @param progress Progress of executing the current task list
    */
-  private def executeTask(progress: JobProgress) {
-    val taskExecutionConfig = progress.current
+  private def executeTask(progress: Progress) {
+    val taskExecutionConfig = progress.currentTask
     val connectorActorName = ConnectorConfig.createActorName(taskExecutionConfig.connectorId)
     val connectorActorRef = context.actorFor(s"../../$connectorActorName")
     if (connectorActorRef.isTerminated) {
       throw new Error(progress.errorMsg + s"Connector '$connectorActorName' is terminated")
     }
 
-    connectorActorRef ! TaskExecution(taskExecutionConfig)
+    connectorActorRef ! TaskExecutionRequest(taskExecutionConfig)
   }
 
-  // Initialize and send a message to ourself to start
-  initialize  
-  context.self ! ExecuteTasks()
+  //*******************************************************************************************************************
+  // Boot up
+  //*******************************************************************************************************************
+  log.debug(s"Job worker ${jobConfig.id} Actor '${context.self.path.toString}'")
+  initialize
+  context.self ! Start
 }
 
-/**
- * Identifier messages for the JobWorker actor
- */
-trait JobWorkerMessage
 
-/**
- * Executes
- */
-case class ExecuteTasks() extends JobWorkerMessage
 
-/**
- * Details the current task that is being performed
- *
- *  @param idx Index of the current task being executed
- */
-case class JobProgress(idx: Int, jobConfig: JobConfig) extends StateData {
-
-  /**
-   * True if we have finished processing and there are no more tasks to execute
-   */
-  val isFinished: Boolean = idx >= jobConfig.tasks.size
-
-  /**
-   * Current task execution configuration to run
-   */
-  val current = jobConfig.tasks(idx)
-
-  /**
-   * Generic error message to identify this task
-   */
-  val errorMsg = s"Error executing task '${current.taskName}' in connector '${current.connectorId}' " +
-    s"for job '${jobConfig.id}'. "
-
-}

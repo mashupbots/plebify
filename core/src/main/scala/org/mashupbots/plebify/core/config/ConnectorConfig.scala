@@ -23,13 +23,13 @@ import scala.collection.JavaConversions._
  * Connector configuration
  *
  * @param id Unique id of this connector
- * @param className Full class path name name to the connector
+ * @param factoryClassName Full class path to factory class that will instance our actor
  * @param params Parameters for the factory class
  */
 case class ConnectorConfig(
   id: String,
   description: String,
-  className: String,
+  factoryClassName: String,
   params: Map[String, String]) extends Extension {
 
   /**
@@ -42,8 +42,8 @@ case class ConnectorConfig(
   def this(id: String, config: Config, keyPath: String) = this(
     id,
     ConfigUtil.getString(config, s"$keyPath.description", ""),
-    config.getString(s"$keyPath.class-name"),
-    ConfigUtil.getParameters(config, keyPath, List("class-name", "description")))
+    config.getString(s"$keyPath.factory-class-name"),
+    ConfigUtil.getParameters(config, keyPath, List("factory-class-name", "description")))
 
   /**
    * Name of the actor representing this connector

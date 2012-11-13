@@ -17,106 +17,253 @@ package org.mashupbots.plebify.core
 
 import org.mashupbots.plebify.core.config.ConnectorConfig
 import org.mashupbots.plebify.core.config.PlebifyConfig
+
 import akka.actor.Actor
-import akka.actor.PoisonPill
-import akka.actor.Props.apply
+import akka.actor.ActorRef
+import akka.actor.FSM
 import akka.actor.Props
+
+/**
+ * FSM states for [[org.mashupbots.plebify.core.Engine]]
+ */
+sealed trait EngineState
+
+/**
+ * FSM data for [[org.mashupbots.plebify.core.Engine]]
+ */
+trait EngineData
 
 /**
  * The Plebify engine manages connectors and jobs.
  *
- * The engine does not handle any messages. When you instance it, it starts.  When you send a `PoisonPill` or
- * `Kill` message, it stops.
+ * To start, send a [[org.mashupbots.plebify.core.StartRequest]] message.
+ *
+ * To stop, send a [[org.mashupbots.plebify.core.StopRequst]] message.
  *
  * @param configName Name of root Plebify element parsed in the AKKA config. Defaults to `plebify`.
  */
-class Engine(val configName: String = "plebify") extends Actor with akka.actor.ActorLogging {
+class Engine(val configName: String = "plebify") extends Actor
+  with FSM[EngineState, EngineData] with akka.actor.ActorLogging {
 
   /**
    * Plebify configuration
    */
   val config: PlebifyConfig = new PlebifyConfig(context.system.settings.config, configName)
 
+  //*******************************************************************************************************************
+  // State
+  //*******************************************************************************************************************
   /**
-   * Start connectors and jobs
+   * Engine has stopped
    */
-  override def preStart() {
-    log.info("Plebify Engine starting...")
+  case object Stopped extends EngineState
 
-    // Start connectors
-    config.connectors.foreach {
-      case (id, connectorConfig) => {
-        log.info(s"  Starting connector '$id'")
+  /**
+   * Engine is stopping
+   */
+  case object Stopping extends EngineState
 
-        // Try to instance with config argument. If class does not take config parameter, default constructor
-        // will be called
-        val clazz = Class.forName(connectorConfig.className)
-        val instance: Actor = {
-          try {
-            val constructor = clazz.getConstructor(classOf[ConnectorConfig])
-            constructor.newInstance(connectorConfig).asInstanceOf[Actor]
-          } catch {
-            case _: NoSuchMethodException => clazz.newInstance().asInstanceOf[Actor]
+  /**
+   * Engine is starting
+   */
+  case object Starting extends EngineState
+
+  /**
+   * Engine has started
+   */
+  case object Started extends EngineState
+
+  //*******************************************************************************************************************
+  // Data
+  //*******************************************************************************************************************
+  /**
+   * No data present
+   */
+  case object NoData extends EngineData
+
+  trait Progress {
+    def sender: ActorRef
+    def description: String
+  }
+
+  /**
+   * Details the job that is being started/stopped
+   *
+   *  @param idx Index of the current job being started or stopped
+   *  @param sender Sender of the initial StartRequest or StopRequest
+   */
+  case class JobProgress(idx: Int, sender: ActorRef) extends EngineData with Progress {
+
+    /**
+     * True if there are more jobs to process
+     */
+    val hasNext: Boolean = (idx + 1) < config.jobs.size
+
+    /**
+     * Current job being started/stopped
+     */
+    val currentJob = config.jobs(idx)
+
+    /**
+     * Next job to process
+     */
+    lazy val next = if (hasNext) this.copy(idx = idx + 1) else null
+
+    /**
+     * Description of this job
+     */
+    val description = s"job ${currentJob.id}"
+  }
+
+  /**
+   * Details the connector that is being started/stopped
+   *
+   *  @param idx Index of the current job being started or stopped
+   *  @param sender Sender of the initial StartRequest or StopRequest
+   */
+  case class ConnectorProgress(idx: Int, sender: ActorRef) extends EngineData with Progress {
+
+    /**
+     * True if there are more to process
+     */
+    val hasNext: Boolean = (idx + 1) < config.connectors.size
+
+    /**
+     * Current connector being started/stopped
+     */
+    val currentConnector = config.connectors(idx)
+
+    /**
+     * Next connector to process
+     */
+    lazy val next = if (hasNext) this.copy(idx = idx + 1) else null
+
+    /**
+     * Description of this job
+     */
+    val description = s"connector ${currentConnector.id}"
+  }
+
+  //*******************************************************************************************************************
+  // Transitions
+  //*******************************************************************************************************************
+  startWith(Stopped, NoData)
+
+  when(Stopped) {
+    case Event(request: StartRequest, NoData) =>
+      val progress = ConnectorProgress(0, sender)
+      try {
+        log.info(s"Starting Plebify")
+        goto(Starting) using startConnector(progress)
+      } catch {
+        case e: Throwable =>
+          sender ! StartResponse(s"Error starting ${progress.description}", Some(e))
+          goto(Stopped) using NoData
+      }
+  }
+
+  when(Starting) {
+    // Get a response from a job or connector
+    case Event(response: StartResponse, progress: Progress) =>
+      try {
+        if (response.isSuccess) {
+          progress match {
+            case connectorProgress: ConnectorProgress => {
+              if (connectorProgress.hasNext) {
+                stay using startConnector(connectorProgress.next)
+              } else {
+                // No more connectors, start jobs
+                stay using startJob(JobProgress(0, connectorProgress.sender))
+              }
+            }
+            case jobProgress: JobProgress => {
+              if (jobProgress.hasNext) {
+                stay using startJob(jobProgress.next)
+              } else {
+                // No more connectors - we have started
+                jobProgress.sender ! StartResponse()
+                goto(Started) using NoData
+              }
+            }
           }
+        } else {
+          throw new Error(response.error.get.getMessage, response.error.get)
         }
-        val connector = context.system.actorOf(Props(instance), name = connectorConfig.actorName)
+      } catch {
+        case e: Throwable =>
+          progress.sender ! StartResponse(s"Error starting ${progress.description}. ${e.getMessage}", Some(e))
+          goto(Stopped) using NoData
       }
-    }
+  }
 
-    // Start jobs
-    config.jobs.foreach {
-      case (id, jobConfig) => {
-        val jobActor = context.system.actorOf(Props(new Job(jobConfig)), name = jobConfig.actorName)
+  when(Started) {
+    case Event(request: StopRequest, NoData) =>
+      log.info(s"Stopping Plebify")
+      goto(Stopping) using stopJob(JobProgress(0, sender))
+  }
+
+  when(Stopping) {
+    // Got a response from a job or connector
+    case Event(response: StopResponse, progress: Progress) =>
+      if (!response.isSuccess) {
+        log.error(response.error.get, s"Error while stopping")
       }
-    }
-  }
+      progress match {
+        case jobProgress: JobProgress =>
+          if (jobProgress.hasNext) {
+            stay using stopJob(jobProgress.next)
+          } else {
+            // No more jobs - stop connectors
+            goto(Stopping) using stopConnector(ConnectorProgress(0, jobProgress.sender))
+          }
 
-  /**
-   * In restarting the engine after an error, stop all children and ourself.
-   */
-  override def preRestart(reason: Throwable, message: Option[Any]) {
-    try {
-      postStop()
-    } finally {
-      // Just incase we cannot gracefully stop the children, kill them!
-      context.children.foreach(context.stop(_))
-    }
-  }
-
-  /**
-   * After stopping all children and ourself in `preRestart`, start up again.
-   */
-  override def postRestart(reason: Throwable) {
-    preStart()
-  }
-
-  /**
-   * Stop connectors and jobs
-   */
-  override def postStop() {
-    log.info("Plebify Engine stopping...")
-
-    // Stop jobs
-    config.jobs.foreach {
-      case (id, jobConfig) => {
-        context.actorFor(jobConfig.actorName) ! PoisonPill
+        case connectorProgress: ConnectorProgress =>
+          if (connectorProgress.hasNext) {
+            stay using stopConnector(connectorProgress.next)
+          } else {
+            // No more connectors - we have finished
+            connectorProgress.sender ! StopResponse
+            goto(Stopped) using NoData
+          }
       }
-    }
 
-    // Stop connectors
-    config.connectors.foreach {
-      case (id, connectorConfig) => {
-        context.actorFor(connectorConfig.actorName) ! PoisonPill
-      }
-    }
   }
 
-  /**
-   * The engine does not handle any messages.
-   */
-  def receive = {
-    case x => throw new Error(s"Unrecognised message${x.toString}")
+  private def startConnector(progress: ConnectorProgress): ConnectorProgress = {
+    val connectorConfig = progress.currentConnector
+    log.info(s"Starting connector ${connectorConfig.id}")
+
+    val clazz = Class.forName(connectorConfig.factoryClassName)
+    val factory = clazz.newInstance().asInstanceOf[ConnectorFactory]
+    val connector = factory.create(context.system, connectorConfig)
+    connector ! StartRequest()
+    progress
   }
 
+  private def stopConnector(progress: ConnectorProgress): ConnectorProgress = {
+    val connectorConfig = progress.currentConnector
+    val connectorActor = context.actorFor(connectorConfig.actorName)
+    connectorActor ! StopRequest()
+    progress
+  }
+
+  private def startJob(progress: JobProgress): JobProgress = {
+    val jobConfig = progress.currentJob
+    val jobActor = context.system.actorOf(Props(new Job(jobConfig)), name = jobConfig.actorName)
+    jobActor ! StartRequest()
+    progress
+  }
+
+  private def stopJob(progress: JobProgress): JobProgress = {
+    val jobConfig = progress.currentJob
+    val jobActor = context.actorFor(jobConfig.actorName)
+    jobActor ! StopRequest()
+    progress
+  }
+
+  //*******************************************************************************************************************
+  // Boot up
+  //*******************************************************************************************************************
+  initialize
 }
 

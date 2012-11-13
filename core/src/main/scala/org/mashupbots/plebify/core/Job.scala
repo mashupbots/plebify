@@ -15,15 +15,25 @@
 //
 package org.mashupbots.plebify.core
 
-import akka.actor.Actor
-import org.mashupbots.plebify.core.config.JobConfig
-import org.mashupbots.plebify.core.config.ConnectorConfig
-import akka.pattern.ask
-import scala.concurrent.duration._
-import scala.util.Success
-import scala.util.Failure
-import akka.actor.Props
 import java.util.UUID
+
+import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.mashupbots.plebify.core.config.JobConfig
+
+import akka.actor.Actor
+import akka.actor.ActorRef
+import akka.actor.FSM
+import akka.actor.Props
+
+/**
+ * FSM states for [[org.mashupbots.plebify.core.Job]]
+ */
+sealed trait JobState
+
+/**
+ * FSM data for [[org.mashupbots.plebify.core.Job]]
+ */
+trait JobData
 
 /**
  * A job waits for connector events to fire and executing tasks.
@@ -35,107 +45,173 @@ import java.util.UUID
  *
  * When the event fires, the job will receive a [[org.mashupbots.plebify.core.EventNotification]] message.  This will
  * trigger the job to instance a [[org.mashupbots.plebify.core.JobWorker]] to execute the specified task(s).
+ *
+ * @param jobConfig Configuration for the job represented by this Actor
  */
-class Job(val config: JobConfig) extends Actor with akka.actor.ActorLogging {
-  import context.dispatcher
+class Job(val jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with akka.actor.ActorLogging {
+
+  //*******************************************************************************************************************
+  // State
+  //*******************************************************************************************************************
+  /**
+   * Job has stopped
+   */
+  case object Stopped extends JobState
 
   /**
-   * Start connectors and jobs
+   * Job is stopping
    */
-  override def preStart() {
-    log.info(s"Starting job '${config.id}' as actor '${context.self.path.toString}'")
+  case object Stopping extends JobState
 
-    config.events.foreach(eventConfig => {
+  /**
+   * Job is starting
+   */
+  case object Starting extends JobState
 
-      val connectorActorName = ConnectorConfig.createActorName(eventConfig.connectorId)
-      val connectorActorRef = context.actorFor(s"../$connectorActorName")
-      if (connectorActorRef.isTerminated) {
-        throw new Error(s"Connector $connectorActorName is not running!")
-      }
+  /**
+   * Job has started
+   */
+  case object Started extends JobState
 
-      val msg = s"Error subscribing to connector '${eventConfig.connectorId}' event '${eventConfig.eventName}' " +
-        s"for job '${config.id}'."
-      val future = connectorActorRef.ask(EventSubscription(context.self, eventConfig))(5 seconds)
-      future.onComplete {
-        case Success(result: EventSubscriptionResult) =>
-          if (!result.isSuccess) {
-            log.error(result.error.get, msg)
-            throw new Error(msg, result.error.get)
-          }
-        case Failure(e: Throwable) => {
-          log.error(e, msg)
-          throw new Error(msg, e)
-        }
-        case x => {
-          log.error(msg + x.toString)
-          throw new Error(msg)
-        }
-      }
+  //*******************************************************************************************************************
+  // Data
+  //*******************************************************************************************************************
+  /**
+   * No data present
+   */
+  case object NoData extends JobData
 
-    })
+  /**
+   * Details the event that is being subscribed/unsubscribed
+   *
+   *  @param idx Index of the current job being started or stopped
+   */
+  case class EventProgress(idx: Int, sender: ActorRef) extends JobData {
 
+    /**
+     * True if there are more events to process
+     */
+    val hasNext: Boolean = (idx + 1) < jobConfig.events.size
+
+    /**
+     * Current event
+     */
+    val currentEvent = jobConfig.events(idx)
+
+    /**
+     * Move to next event
+     */
+    lazy val next = if (hasNext) null else this.copy(idx = idx + 1)
+    
+    /**
+     * Description of the current event for error message
+     */
+    val description = s"event ${currentEvent.id} in job ${jobConfig.id}"
   }
 
-  /**
-   * In restarting the engine after an error, stop all children and ourself.
-   */
-  override def preRestart(reason: Throwable, message: Option[Any]) {
-    try {
-      postStop()
-    } finally {
-      // Just in case we cannot gracefully stop the children, kill them!
-      context.children.foreach(context.stop(_))
+  //*******************************************************************************************************************
+  // Transitions
+  //*******************************************************************************************************************
+  startWith(Stopped, NoData)
+
+  when(Stopped) {
+    case Event(request: StartRequest, NoData) => {
+      val progress = EventProgress(0, sender)
+      try {
+        log.info(s"Starting job ${jobConfig.id}")
+        goto(Starting) using subscribe(progress)
+      } catch {
+        case e: Throwable =>
+          sender ! StartResponse(s"Error subscribing to ${progress.description}", Some(e))
+          goto(Stopped) using NoData
+      }
     }
   }
 
-  /**
-   * After stopping all children and ourself in `preRestart`, start up again.
-   */
-  override def postRestart(reason: Throwable) {
-    preStart()
-  }
-
-  /**
-   * Stop connectors and jobs
-   */
-  override def postStop() {
-    log.info(s"Stopping job '${config.id}'")
-
-    config.events.foreach(eventConfig => {
-      val connectorActorName = ConnectorConfig.createActorName(eventConfig.connectorId)
-      val connectorActorRef = context.actorFor(s"../$connectorActorName")
-      if (!connectorActorRef.isTerminated) {
-        val msg = s"Error cancelling subscription to connector '${eventConfig.connectorId}' event '${eventConfig.eventName}' " +
-          s"for job '${config.id}'."
-        val future = connectorActorRef.ask(EventSubscriptionCancellation(context.self, eventConfig))(5 seconds)
-        future.onComplete {
-          case Success(result: EventSubscriptionCancellationResult) =>
-            if (!result.isSuccess) {
-              log.error(result.error.get, msg)
-              throw new Error(msg, result.error.get)
-            }
-          case Failure(e: Throwable) => {
-            log.error(e, msg)
-            throw new Error(msg, e)
+  when(Starting) {
+    // Get a response from a connector
+    case Event(response: EventSubscriptionResponse, progress: EventProgress) => {
+      try {
+        if (response.isSuccess) {
+          if (progress.hasNext) {
+            stay using subscribe(progress.next)
+          } else {
+            goto(Started) using NoData
           }
-          case x => {
-            log.error(msg + x.toString)
-            throw new Error(msg)
-          }
+        } else {
+          throw new Error(response.error.get.getMessage, response.error.get)
         }
+      } catch {
+        case e: Throwable =>
+          progress.sender ! StartResponse(s"Error subscribing to ${progress.description}", response.error)
+          goto(Stopped) using NoData
       }
-    })
+    }
   }
 
-  /**
-   * Incoming message processing
-   */
-  def receive = {
-    // When we get an event notification, create a JobWork to do execute tasks
-    case event: EventNotification => {
-      val jobWorker = context.system.actorOf(Props[JobWorker], name = s"plebify-jobworker-${config.id}-" +
+  when(Started) {
+    case Event(request: StopRequest, NoData) => {
+      log.info(s"Stopping job ${jobConfig.id}")
+      val progress = EventProgress(0, sender)
+      goto(Stopping) using unsubscribe(progress)
+    }
+
+    case Event(notification: EventNotification, NoData) => {
+      val jobWorker = context.system.actorOf(Props[JobWorker], name = s"plebify-jobworker-${jobConfig.id}-" +
         UUID.randomUUID())
+      stay
     }
   }
+
+  when(Stopping) {
+    // Got a response from a job
+    case Event(response: EventUnsubscriptionResponse, progress: EventProgress) => {
+      if (!response.isSuccess) {
+        log.error(response.error.get, s"Error unsubscribing from event ${progress.currentEvent.id}")
+      }
+      if (progress.hasNext) {
+        stay using unsubscribe(progress.next)
+      } else {
+        goto(Stopped) using NoData
+      }
+    }
+  }
+
+  onTermination {
+    case StopEvent(FSM.Normal, state, data) =>
+      log.info(s"Job '${jobConfig.id}' stopped.")
+
+    case StopEvent(FSM.Shutdown, state, data) =>
+      log.info(s"Shutting down job '${jobConfig.id}'")
+
+    case StopEvent(FSM.Failure(cause: String), state, progress) =>
+      log.error(s"Error in job ${jobConfig.id}. " + cause)
+  }
+
+  private def subscribe(progress: EventProgress): EventProgress = {
+    callConnector(progress, EventSubscriptionRequest(progress.currentEvent))
+  }
+
+  private def unsubscribe(progress: EventProgress): EventProgress = {
+    callConnector(progress, EventUnsubscriptionRequest(progress.currentEvent))
+  }
+
+  private def callConnector(progress: EventProgress, msg: ConnectorMessage): EventProgress = {
+    val eventConfig = progress.currentEvent
+    val connectorActorName = ConnectorConfig.createActorName(eventConfig.connectorId)
+    val connector = context.system.actorFor(s"$connectorActorName")
+    if (connector.isTerminated) {
+      throw new Error(s"Connector $connectorActorName is not running!")
+    }
+    connector ! msg
+    progress
+  }
+
+  //*******************************************************************************************************************
+  // Boot up
+  //*******************************************************************************************************************
+  log.debug(s"Job ${jobConfig.id} Actor '${context.self.path.toString}'")
+  initialize
+
 }
 
