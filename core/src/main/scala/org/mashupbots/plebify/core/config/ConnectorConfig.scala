@@ -49,7 +49,7 @@ case class ConnectorConfig(
    * Name of the actor representing this connector
    */
   val actorName = ConnectorConfig.createActorName(id)
-
+ 
 }
 
 object ConnectorConfig {
@@ -60,5 +60,5 @@ object ConnectorConfig {
    * @param connectorId Connector id
    * @returns Unique name for a connector actor of the specified `id`.
    */
-  def createActorName(connectorId: String): String = s"plebify-connector-$connectorId"
+  def createActorName(connectorId: String): String = s"connector-$connectorId"
 }

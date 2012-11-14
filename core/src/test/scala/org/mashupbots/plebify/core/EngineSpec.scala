@@ -28,6 +28,7 @@ import scala.concurrent.duration._
 import org.mashupbots.plebify.core.config.ConnectorConfig
 import akka.actor.ActorRef
 import org.slf4j.LoggerFactory
+import akka.actor.ActorContext
 
 object EngineSpec {
 
@@ -91,36 +92,34 @@ class EngineSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
   "Engine" must {
 
     "Fail when connector class is not found" in {
-      val engine = system.actorOf(Props(new Engine(configName = "class-not-found")))
+      val engine = system.actorOf(Props(new Engine(configName = "class-not-found")), name = "class-not-found")
       engine ! StartRequest()
       expectMsgPF(5 seconds) {
         case m: StartResponse => {
           log.debug(m.toString)
           m.isSuccess must be(false)
-          m.error.get.isInstanceOf[ClassNotFoundException] must be(true)
+          m.error.get.getMessage.contains("org.mashupbots.plebify.fileConnector") must be (true)
         }
       }
     }
-
     "Fail when job cannot find connector" in {
-      val engine = system.actorOf(Props(new Engine(configName = "connector-not-found")))
+      val engine = system.actorOf(Props(new Engine(configName = "connector-not-found")),
+        name = "connector-not-found")
       engine ! StartRequest()
       expectMsgPF(5 seconds) {
         case m: StartResponse => {
           log.debug(m.toString)
-          //log.error("", m.error.get)
           m.isSuccess must be(false)
-          m.error.get.getMessage must be ("Connector plebify-connector-notfound is not running!")
+          m.error.get.getMessage.contains("Error starting one or more jobs") must be (true)
         }
       }
-
     }
   }
 }
 
 class DummyEngineSpecConnectorFactory extends ConnectorFactory {
-  def create(system: ActorSystem, connectorConfig: ConnectorConfig): ActorRef = {
-    system.actorOf(Props(new DummyEngineSpecConnector1(connectorConfig)), name = connectorConfig.actorName)
+  def create(context: ActorContext, connectorConfig: ConnectorConfig): ActorRef = {
+    context.actorOf(Props(new DummyEngineSpecConnector1(connectorConfig)), name = connectorConfig.actorName)
   }
 }
 
@@ -130,9 +129,5 @@ class DummyEngineSpecConnector1(connectorConfig: ConnectorConfig) extends Actor 
     case x: StartRequest =>
       log.info(s"${context.self.path.toString} start")
       sender ! StartResponse()
-    case x: StopRequest =>
-      log.info(s"${context.self.path.toString} stop")
-      sender ! StopResponse()
-    case x => log.info(s"Unknown message ${x.toString}")
   }
 }

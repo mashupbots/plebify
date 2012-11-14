@@ -21,6 +21,7 @@ import org.mashupbots.plebify.core.config.TaskExecutionConfig
 import akka.actor.Actor
 import akka.actor.ActorSystem
 import org.mashupbots.plebify.core.config.ConnectorConfig
+import akka.actor.ActorContext
 
 abstract class ConnectorFactory() {
 
@@ -30,7 +31,8 @@ abstract class ConnectorFactory() {
    * The [[org.mashupbots.plebify.core.Engine]] will call instance and call this factory class to create a new
    * instance in the specified actor system.
    *
-   * The actor must be named using `connectorConfig.actorName`.
+   * The actor must be created using the supplied `context` so it can be managed and named using
+   * `connectorConfig.actorName`.
    *
    * After instancing, [[org.mashupbots.plebify.core.Engine]] will send a [[org.mashupbots.plebify.core.StartRequest]]
    * message to the actor.  [[org.mashupbots.plebify.core.StartResponse]] is expected in reply when the actor is
@@ -38,8 +40,11 @@ abstract class ConnectorFactory() {
    *
    * When stopping, the [[org.mashupbots.plebify.core.Engine]] will send a [[org.mashupbots.plebify.core.StopRequest]]
    * message. [[org.mashupbots.plebify.core.StopResponse]] is expected in reply.
+   *
+   * @param context Engine actor context
+   * @param connectorConfig configuration for this connector
    */
-  def create(system: ActorSystem, connectorConfig: ConnectorConfig): ActorRef
+  def create(context: ActorContext, connectorConfig: ConnectorConfig): ActorRef
 }
 
 /**

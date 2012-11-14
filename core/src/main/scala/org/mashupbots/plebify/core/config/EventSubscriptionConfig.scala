@@ -57,5 +57,4 @@ case class EventSubscriptionConfig(
    * Name of the connector event to which to subscribe 
    */
   val eventName = splitId(1)
-
 }

@@ -89,5 +89,5 @@ object JobConfig {
    * @param jobId Job id
    * @returns Unique name for a job actor of the specified `id`.
    */
-  def createActorName(jobId: String): String = s"plebify-job-$jobId"
+  def createActorName(jobId: String): String = s"job-$jobId"
 }

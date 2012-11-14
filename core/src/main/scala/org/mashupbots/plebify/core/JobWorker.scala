@@ -93,7 +93,7 @@ class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends 
   startWith(Idle, Uninitialized)
 
   when(Idle) {
-    case Event(Start, Uninitialized) => {
+    case Event(_, Uninitialized) => {
       log.info(s"Executing tasks for job '${jobConfig.id}'")
       
       val progress = Progress(0, jobConfig)
@@ -101,9 +101,6 @@ class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends 
       goto(Active) using progress forMax (5 seconds)
     }
 
-    case Event(Stop, progress: Progress) => {
-      stop(FSM.Failure("Processing interruped by Stop message"), Uninitialized)
-    }
   }
 
   when(Active) {
@@ -130,9 +127,6 @@ class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends 
       stop(FSM.Failure("Connector timed out"), Uninitialized)
     }
 
-    case Event(Stop, progress: Progress) => {
-      stop(FSM.Failure("Processing interruped by Stop message"), Uninitialized)
-    }
   }
 
   onTermination {
@@ -167,7 +161,7 @@ class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends 
   //*******************************************************************************************************************
   log.debug(s"Job worker ${jobConfig.id} Actor '${context.self.path.toString}'")
   initialize
-  context.self ! Start
+
 }
 
 

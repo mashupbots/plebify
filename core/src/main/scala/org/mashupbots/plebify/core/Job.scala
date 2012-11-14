@@ -17,6 +17,9 @@ package org.mashupbots.plebify.core
 
 import java.util.UUID
 
+import scala.concurrent.Future
+import scala.concurrent.duration._
+
 import org.mashupbots.plebify.core.config.ConnectorConfig
 import org.mashupbots.plebify.core.config.JobConfig
 
@@ -24,6 +27,9 @@ import akka.actor.Actor
 import akka.actor.ActorRef
 import akka.actor.FSM
 import akka.actor.Props
+import akka.pattern.ask
+import akka.pattern.pipe
+import akka.util.Timeout.durationToTimeout
 
 /**
  * FSM states for [[org.mashupbots.plebify.core.Job]]
@@ -48,30 +54,29 @@ trait JobData
  *
  * @param jobConfig Configuration for the job represented by this Actor
  */
-class Job(val jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with akka.actor.ActorLogging {
+class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with akka.actor.ActorLogging {
+
+  import context.dispatcher
+
+  private case class Subscribe() extends NotificationMessage
 
   //*******************************************************************************************************************
   // State
   //*******************************************************************************************************************
   /**
-   * Job has stopped
+   * Job has just started but is yet to initialize connectors and jobs
    */
-  case object Stopped extends JobState
+  case object Uninitialized extends JobState
 
   /**
-   * Job is stopping
+   * Job is in the process of subscribing to events
    */
-  case object Stopping extends JobState
+  case object Initializing extends JobState
 
   /**
-   * Job is starting
+   * Job is initialized and ready to receive events and execute tasks
    */
-  case object Starting extends JobState
-
-  /**
-   * Job has started
-   */
-  case object Started extends JobState
+  case object Initialized extends JobState
 
   //*******************************************************************************************************************
   // Data
@@ -82,129 +87,96 @@ class Job(val jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] wi
   case object NoData extends JobData
 
   /**
-   * Details the event that is being subscribed/unsubscribed
-   *
-   *  @param idx Index of the current job being started or stopped
+   * Data used during initialization process
    */
-  case class EventProgress(idx: Int, sender: ActorRef) extends JobData {
-
-    /**
-     * True if there are more events to process
-     */
-    val hasNext: Boolean = (idx + 1) < jobConfig.events.size
-
-    /**
-     * Current event
-     */
-    val currentEvent = jobConfig.events(idx)
-
-    /**
-     * Move to next event
-     */
-    lazy val next = if (hasNext) null else this.copy(idx = idx + 1)
-    
-    /**
-     * Description of the current event for error message
-     */
-    val description = s"event ${currentEvent.id} in job ${jobConfig.id}"
-  }
+  case class InitializationData(starter: ActorRef) extends JobData
 
   //*******************************************************************************************************************
   // Transitions
   //*******************************************************************************************************************
-  startWith(Stopped, NoData)
+  startWith(Uninitialized, NoData)
 
-  when(Stopped) {
-    case Event(request: StartRequest, NoData) => {
-      val progress = EventProgress(0, sender)
-      try {
-        log.info(s"Starting job ${jobConfig.id}")
-        goto(Starting) using subscribe(progress)
-      } catch {
-        case e: Throwable =>
-          sender ! StartResponse(s"Error subscribing to ${progress.description}", Some(e))
-          goto(Stopped) using NoData
-      }
-    }
-  }
-
-  when(Starting) {
-    // Get a response from a connector
-    case Event(response: EventSubscriptionResponse, progress: EventProgress) => {
-      try {
-        if (response.isSuccess) {
-          if (progress.hasNext) {
-            stay using subscribe(progress.next)
-          } else {
-            goto(Started) using NoData
-          }
-        } else {
-          throw new Error(response.error.get.getMessage, response.error.get)
-        }
-      } catch {
-        case e: Throwable =>
-          progress.sender ! StartResponse(s"Error subscribing to ${progress.description}", response.error)
-          goto(Stopped) using NoData
-      }
-    }
-  }
-
-  when(Started) {
-    case Event(request: StopRequest, NoData) => {
-      log.info(s"Stopping job ${jobConfig.id}")
-      val progress = EventProgress(0, sender)
-      goto(Stopping) using unsubscribe(progress)
-    }
-
-    case Event(notification: EventNotification, NoData) => {
-      val jobWorker = context.system.actorOf(Props[JobWorker], name = s"plebify-jobworker-${jobConfig.id}-" +
-        UUID.randomUUID())
+  when(Uninitialized) {
+    case Event(request: StartRequest, _) =>
+      log.info(s"Starting job '${jobConfig.id}'")
+      self ! Subscribe()
+      goto(Initializing) using InitializationData(sender)
+    case unknown =>
+      log.debug("Recieved message while Uninitialised: {}", unknown.toString)
+      if (sender != self) sender ! Uninitilized()
       stay
-    }
   }
 
-  when(Stopping) {
-    // Got a response from a job
-    case Event(response: EventUnsubscriptionResponse, progress: EventProgress) => {
-      if (!response.isSuccess) {
-        log.error(response.error.get, s"Error unsubscribing from event ${progress.currentEvent.id}")
-      }
-      if (progress.hasNext) {
-        stay using unsubscribe(progress.next)
+  when(Initializing) {
+    case Event(msg: Subscribe, data: InitializationData) =>
+      // Subscribe and send Future[Seq[StartResponse]] message back to ourself
+      subscribe()
+    case Event(msg: Seq[_], data: InitializationData) =>
+      // Future successful. Check for errors in all StartResponse received
+      val errors = filterErrors(msg)
+      if (errors.size > 0) {
+        stop(FSM.Failure(new Error(s"Error subscribing to one or more events.")))
       } else {
-        goto(Stopped) using NoData
+        data.starter ! StartResponse()
+        goto(Initialized)
       }
-    }
+    case Event(msg: akka.actor.Status.Failure, data: InitializationData) =>
+      stop(FSM.Failure(new Error(s"Error while waiting for event subscription futures. ${msg.cause.getMessage}",
+        msg.cause)))
+    case unknown =>
+      log.debug("Recieved unknown message while Initializing: {}", unknown.toString)
+      if (sender != self) sender ! Uninitilized()
+      stay
+  }
+
+  when(Initialized) {
+    case Event(_, _) => stay
   }
 
   onTermination {
-    case StopEvent(FSM.Normal, state, data) =>
-      log.info(s"Job '${jobConfig.id}' stopped.")
+    case StopEvent(FSM.Failure(cause: Throwable), state, data: InitializationData) =>
+      data.starter ! StartResponse(Some(new Error(s"Error starting job. ${cause.getMessage}", cause)))
+    case _ =>
+      log.info(s"Job shutdown")
 
-    case StopEvent(FSM.Shutdown, state, data) =>
-      log.info(s"Shutting down job '${jobConfig.id}'")
-
-    case StopEvent(FSM.Failure(cause: String), state, progress) =>
-      log.error(s"Error in job ${jobConfig.id}. " + cause)
   }
 
-  private def subscribe(progress: EventProgress): EventProgress = {
-    callConnector(progress, EventSubscriptionRequest(progress.currentEvent))
+  private def filterErrors(msg: Seq[_]): Seq[StartResponse] = {
+    val responses = msg.asInstanceOf[Seq[StartResponse]]
+    responses.filter(r => !r.isSuccess)
   }
 
-  private def unsubscribe(progress: EventProgress): EventProgress = {
-    callConnector(progress, EventUnsubscriptionRequest(progress.currentEvent))
-  }
+  private def subscribe(): State = {
+    try {
+      val futures = Future.sequence(jobConfig.events.map(eventConfig => {
+        log.debug(s"Job ${jobConfig.id} subscribing to ${eventConfig.id}")
+        val connectorActorName = ConnectorConfig.createActorName(eventConfig.connectorId)
+        val connector = context.system.actorFor(s"$connectorActorName")
+        ask(connector, EventSubscriptionRequest(eventConfig))(2 seconds).mapTo[StartResponse]
+      }))
 
-  private def callConnector(progress: EventProgress, msg: ConnectorMessage): EventProgress = {
-    val eventConfig = progress.currentEvent
-    val connectorActorName = ConnectorConfig.createActorName(eventConfig.connectorId)
-    val connector = context.system.actorFor(s"$connectorActorName")
-    if (connector.isTerminated) {
-      throw new Error(s"Connector $connectorActorName is not running!")
+      // Send Future[Seq[StartResponse]] message to ourself when future finishes
+      futures pipeTo self
+      stay
+    } catch {
+      case e: Throwable => stop(FSM.Failure(new Error(s"Error subscribing to event. ${e.getMessage}", e)))
     }
-    connector ! msg
-    progress
+  }
+
+  private def unsubscribe() = {
+    jobConfig.events.foreach(eventConfig => {
+      val msg = s"Job ${jobConfig.id} unsubscribing from ${eventConfig.id}"
+      log.debug(msg)
+      try {
+        val connectorActorName = ConnectorConfig.createActorName(eventConfig.connectorId)
+        val connector = context.system.actorFor(s"$connectorActorName")
+        if (!connector.isTerminated) {
+          connector ! EventSubscriptionRequest(eventConfig)
+        }
+      } catch {
+        case e: Throwable => log.error(s"Ignoring error while $msg. ${e.getMessage}.", e)
+      }
+    })
   }
 
   //*******************************************************************************************************************

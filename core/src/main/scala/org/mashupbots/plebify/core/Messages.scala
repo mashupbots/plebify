@@ -35,12 +35,6 @@ trait RequestMessage extends Message
  * [[org.mashupbots.plebify.core.RequestMessage]].
  */
 trait ResponseMessage extends Message {
-
-  /**
-   * Error message
-   */
-  def errorMessage: String
-
   /**
    * Error (if any)
    */
@@ -53,6 +47,7 @@ trait ResponseMessage extends Message {
 }
 
 /**
+ * StartResponse
  * One way notification messages. No response is expected.
  */
 trait NotificationMessage extends Message
@@ -65,24 +60,9 @@ case class StartRequest() extends RequestMessage
 /**
  * Response to starting an FSM actor
  */
-case class StartResponse(errorMessage: String = "", error: Option[Throwable] = None) extends ResponseMessage
+case class StartResponse(error: Option[Throwable] = None) extends ResponseMessage
 
 /**
- * Request to stopping an FSM actor
+ * Message Message to let the sender know that this actor is not initialized and to re-try again soon
  */
-case class StopRequest() extends RequestMessage
-
-/**
- * Response to stopping an FSM actor
- */
-case class StopResponse(errorMessage: String = "", error: Option[Throwable] = None) extends ResponseMessage
-
-/**
- * Message to start an FSM actor
- */
-case object Start extends NotificationMessage
-
-/**
- * Message to stop an FSM actor
- */
-case object Stop extends NotificationMessage
+case class Uninitilized() extends NotificationMessage
