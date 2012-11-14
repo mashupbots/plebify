@@ -123,7 +123,7 @@ class Engine(val configName: String = "plebify") extends Actor
         goto(InitializingJobs)
       }
     case Event(msg: akka.actor.Status.Failure, data: InitializationData) =>
-      stop(FSM.Failure(new Error("Error while waiting for connector start futures. ${msg.cause.getMessage}", msg.cause)))
+      stop(FSM.Failure(new Error(s"Error while waiting for connector start futures. ${msg.cause.getMessage}", msg.cause)))
     case unknown =>
       log.debug("Recieved unknown message while InitializingConnectors: {}", unknown.toString)
       if (sender != self) sender ! Uninitilized()
@@ -142,7 +142,7 @@ class Engine(val configName: String = "plebify") extends Actor
         goto(Initialized)
       }
     case Event(msg: akka.actor.Status.Failure, data: InitializationData) =>
-      stop(FSM.Failure(new Error("Error while waiting for job start futures. ${msg.cause.getMessage}", msg.cause)))
+      stop(FSM.Failure(new Error(s"Error while waiting for job start futures. ${msg.cause.getMessage}", msg.cause)))
     case unknown =>
       log.debug("Recieved unknown message while InitializingJobs: {}", unknown.toString)
       if (sender != self) sender ! Uninitilized()
@@ -167,7 +167,7 @@ class Engine(val configName: String = "plebify") extends Actor
         val clazz = Class.forName(connectorConfig.factoryClassName)
         val factory = clazz.newInstance().asInstanceOf[ConnectorFactory]
         val connector = factory.create(context, connectorConfig)
-        ask(connector, StartRequest())(5 seconds).mapTo[StartResponse]
+        ask(connector, StartRequest())(2 seconds).mapTo[StartResponse]
       }))
 
       // Send Future[Seq[StartResponse]] message to ourself when future finishes
@@ -182,7 +182,7 @@ class Engine(val configName: String = "plebify") extends Actor
     try {
       val futures = Future.sequence(config.jobs.map(jobConfig => {
         val job = context.actorOf(Props(new Job(jobConfig)), name = jobConfig.actorName)
-        ask(job, StartRequest())(5 seconds).mapTo[StartResponse]
+        ask(job, StartRequest())(2 seconds).mapTo[StartResponse]
       }))
 
       // Send Future[Seq[StartResponse]] message to ourself when future finishes

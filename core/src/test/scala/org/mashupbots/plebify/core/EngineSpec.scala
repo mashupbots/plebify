@@ -33,7 +33,7 @@ import akka.actor.ActorContext
 object EngineSpec {
 
   val cfg = """
-		class-not-found {
+		connector-class-not-found {
           connectors {
             notfound {
               factory-class-name = "org.mashupbots.plebify.fileConnector"
@@ -55,7 +55,30 @@ object EngineSpec {
           }
 		}
     
-		connector-not-found {
+		connector-no-response {
+          connectors {
+            dummy1 {
+              factory-class-name = "org.mashupbots.plebify.core.DummyEngineSpecConnectorFactory"
+              no-start-response = true
+            }
+          }
+          jobs {
+            job1 {
+              on {
+                dummy1-event {
+                  description = "on http request #1"
+                  param1 = "aaa"
+		  	    }
+		      }
+              do {
+                dummy1-task {
+		  	    }
+		      }
+            }
+          }
+		}
+    
+        connector-not-found {
           connectors {
             dummy1 {
               factory-class-name = "org.mashupbots.plebify.core.DummyEngineSpecConnectorFactory"
@@ -92,16 +115,31 @@ class EngineSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
   "Engine" must {
 
     "Fail when connector class is not found" in {
-      val engine = system.actorOf(Props(new Engine(configName = "class-not-found")), name = "class-not-found")
+      val engine = system.actorOf(Props(new Engine(configName = "connector-class-not-found")),
+        name = "connector-class-not-found")
       engine ! StartRequest()
       expectMsgPF(5 seconds) {
         case m: StartResponse => {
           log.debug(m.toString)
           m.isSuccess must be(false)
-          m.error.get.getMessage.contains("org.mashupbots.plebify.fileConnector") must be (true)
+          m.error.get.getMessage.contains("org.mashupbots.plebify.fileConnector") must be(true)
         }
       }
     }
+
+    "Fail when connector does not response with a StartResponse" in {
+      val engine = system.actorOf(Props(new Engine(configName = "connector-no-response")), 
+          name = "connector-no-response")
+      engine ! StartRequest()
+      expectMsgPF(5 seconds) {
+        case m: StartResponse => {
+          log.debug(m.toString)
+          m.isSuccess must be(false)
+          m.error.get.getMessage.contains("Error while waiting for connector start futures. Timed out") must be(true)
+        }
+      }
+    }
+
     "Fail when job cannot find connector" in {
       val engine = system.actorOf(Props(new Engine(configName = "connector-not-found")),
         name = "connector-not-found")
@@ -110,7 +148,7 @@ class EngineSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
         case m: StartResponse => {
           log.debug(m.toString)
           m.isSuccess must be(false)
-          m.error.get.getMessage.contains("Error starting one or more jobs") must be (true)
+          m.error.get.getMessage.contains("Error starting one or more jobs") must be(true)
         }
       }
     }
@@ -127,7 +165,7 @@ class DummyEngineSpecConnector1(connectorConfig: ConnectorConfig) extends Actor 
   log.info(s"DummyEngineSpecConnector1 instanced as ${context.self.path.toString}")
   def receive = {
     case x: StartRequest =>
-      log.info(s"${context.self.path.toString} start")
-      sender ! StartResponse()
+      if (!connectorConfig.params.contains("no-start-response"))
+        sender ! StartResponse()
   }
 }
