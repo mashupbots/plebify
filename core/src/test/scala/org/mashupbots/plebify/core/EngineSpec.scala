@@ -43,8 +43,6 @@ object EngineSpec {
             job1 {
               on {
                 notfound-event {
-                  description = "on http request #1"
-                  param1 = "aaa"
 		  	    }
 		      }
               do {
@@ -66,8 +64,6 @@ object EngineSpec {
             job1 {
               on {
                 dummy1-event {
-                  description = "on http request #1"
-                  param1 = "aaa"
 		  	    }
 		      }
               do {
@@ -88,8 +84,7 @@ object EngineSpec {
             job1 {
               on {
                 notfound-event {
-                  description = "on http request #1"
-                  param1 = "aaa"
+                  description = "'notfound' connector id not present as a collector"
 		  	    }
 		      }
               do {
@@ -100,7 +95,26 @@ object EngineSpec {
           }
 		}
     
-    
+        job-not-subscribe {
+          connectors {
+            dummy1 {
+              factory-class-name = "org.mashupbots.plebify.core.DummyEngineSpecConnectorFactory"
+              no-subscription-response = true
+            }
+          }
+          jobs {
+            job1 {
+              on {
+                dummy1-event {
+		  	    }
+		      }
+              do {
+                notfound-task {
+		  	    }
+		      }
+            }
+          }
+		}    
     """
 
 }
@@ -128,8 +142,8 @@ class EngineSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
     }
 
     "Fail when connector does not response with a StartResponse" in {
-      val engine = system.actorOf(Props(new Engine(configName = "connector-no-response")), 
-          name = "connector-no-response")
+      val engine = system.actorOf(Props(new Engine(configName = "connector-no-response")),
+        name = "connector-no-response")
       engine ! StartRequest()
       expectMsgPF(5 seconds) {
         case m: StartResponse => {
@@ -141,8 +155,7 @@ class EngineSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
     }
 
     "Fail when job cannot find connector" in {
-      val engine = system.actorOf(Props(new Engine(configName = "connector-not-found")),
-        name = "connector-not-found")
+      val engine = system.actorOf(Props(new Engine(configName = "connector-not-found")), name = "connector-not-found")
       engine ! StartRequest()
       expectMsgPF(5 seconds) {
         case m: StartResponse => {
@@ -152,6 +165,19 @@ class EngineSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
         }
       }
     }
+
+    "Fail when job connector does not respond with a EventSubscriptionResponse" in {
+      val engine = system.actorOf(Props(new Engine(configName = "job-not-subscribe")), name = "job-not-subscribe")
+      engine ! StartRequest()
+      expectMsgPF(5 seconds) {
+        case m: StartResponse => {
+          log.debug(m.toString)
+          m.isSuccess must be(false)
+          m.error.get.getMessage.contains("Error starting one or more jobs") must be(true)
+        }
+      }
+    }
+
   }
 }
 
@@ -166,6 +192,9 @@ class DummyEngineSpecConnector1(connectorConfig: ConnectorConfig) extends Actor 
   def receive = {
     case x: StartRequest =>
       if (!connectorConfig.params.contains("no-start-response"))
+        sender ! StartResponse()
+    case x: EventSubscriptionRequest =>
+      if (!connectorConfig.params.contains("no-subscription-response"))
         sender ! StartResponse()
   }
 }
