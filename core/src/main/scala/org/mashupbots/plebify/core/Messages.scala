@@ -47,13 +47,15 @@ trait ResponseMessage extends Message {
 }
 
 /**
- * StartResponse
  * One way notification messages. No response is expected.
  */
 trait NotificationMessage extends Message
 
 /**
- * Request to starting an FSM actor
+ * Request to starting an FSM actor.
+ * 
+ * Instead of "auto starting" an actor, we've used a StartRequest/StartResponse messaging pattern so that the caller
+ * can use a future as a means of notification when an actor has started and if it has started successfully. 
  */
 case class StartRequest() extends RequestMessage
 
@@ -63,6 +65,6 @@ case class StartRequest() extends RequestMessage
 case class StartResponse(error: Option[Throwable] = None) extends ResponseMessage
 
 /**
- * Message Message to let the sender know that this actor is not initialized and to re-try again soon
+ * Message to let the sender know that this actor is not initialized and to re-try again
  */
 case class Uninitilized() extends NotificationMessage

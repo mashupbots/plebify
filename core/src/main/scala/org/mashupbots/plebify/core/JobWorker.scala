@@ -34,10 +34,24 @@ sealed trait JobWorkerState
 trait JobWorkerData
 
 /**
- * Worker actor used to process an instance of a [[org.mashupbots.plebify.core.TriggerMessage]].
+ * Worker actor instanced by [[org.mashupbots.plebify.core.Job]] to execute tasks.
  *
- * The `JobWorker` is created by the boss [[org.mashupbots.plebify.core.Job]] actor.  Once processing
- * is finished, the `JobWorker` terminates.
+ * ==Starting==
+ * [[org.mashupbots.plebify.core.JobWorker]] has no initialization processing.  As such, it does '''not''' support a
+ * [[org.mashupbots.plebify.core.StartRequest]] message.
+ *
+ * To start start task execution, send a [[org.mashupbots.plebify.core.EventNotification]] message. This is a one way
+ * message and not responses will be returned to the sender.
+ *
+ * Alternatively, if you require a response, send a [[org.mashupbots.plebify.core.JobWorkerRequest]] message.
+ * A [[org.mashupbots.plebify.core.JobWorkerResponse]] message will be returned when processing is finished.
+ *
+ * ==Stopping==
+ * By default, the JobWorker will self terminate after task execution; i.e. after processing a single
+ * [[org.mashupbots.plebify.core.EventNotification]] or [[org.mashupbots.plebify.core.JobWorkerRequest]] message.
+ *
+ * If using in a router scenario, as specified in the [[org.mashupbots.plebify.core.JobConfig]], it will '''NOT'''
+ * self terminate.
  */
 class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends Actor
   with FSM[JobWorkerState, JobWorkerData] with akka.actor.ActorLogging {
@@ -95,7 +109,7 @@ class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends 
   when(Idle) {
     case Event(_, Uninitialized) => {
       log.info(s"Executing tasks for job '${jobConfig.id}'")
-      
+
       val progress = Progress(0, jobConfig)
       executeTask(progress)
       goto(Active) using progress forMax (5 seconds)

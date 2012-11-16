@@ -44,13 +44,34 @@ trait JobData
 /**
  * A job waits for connector events to fire and executing tasks.
  *
- * When you instance a job, it starts.  When you send a `PoisonPill` or `Kill` message, it stops.
+ * ==Starting==
+ * Jobs are started by [[org.mashupbots.plebify.core.Engine]].
+ *
+ * Startup follows the [[org.mashupbots.plebify.core.StartRequest]]/[[org.mashupbots.plebify.core.StartResponse]]
+ * message pattern.
  *
  * Upon starting, a job will subscribe to events by sending a [[org.mashupbots.plebify.core.EventSubsription]] to the
- * specified connector.
+ * specified connector.  The job is deemed initialized only when it has successfully subscribed to all its
+ * connector events.
  *
- * When the event fires, the job will receive a [[org.mashupbots.plebify.core.EventNotification]] message.  This will
- * trigger the job to instance a [[org.mashupbots.plebify.core.JobWorker]] to execute the specified task(s).
+ * ==Stopping==
+ * Jobs are stopped by [[org.mashupbots.plebify.core.Engine]] using the standard methods.
+ *
+ * ==Processing==
+ * When the event fires, the connector event will send a [[org.mashupbots.plebify.core.EventNotification]] message to
+ * the job. The job reacts to this message by instancing a [[org.mashupbots.plebify.core.JobWorker]] to asynchronously
+ * execute the specified task(s).
+ *
+ * This master/worker pattern allows more than one event notification to be processed concurrently. The number of 
+ * concurrent workers by settings in [[org.mashupbots.plebify.core.config.JobConfig]].
+ *  - `workerConcurrencyMethod`
+ *  - `workerCount`
+ *
+ * If `workerConcurrencyMethod` is `router`, [[org.mashupbots.plebify.core.JobWorker]] is instanced `workerCount`
+ * times and used behind an Akka router.
+ *
+ * If `workerConcurrencyMethod` is `highWaterMark`, [[org.mashupbots.plebify.core.EventNotification]] will be ignored
+ * once the number of JobWorker exceeds `workerCount`.  This is the default setting with a `workerCount` of 5.
  *
  * @param jobConfig Configuration for the job represented by this Actor
  */
@@ -136,6 +157,7 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
   onTermination {
     case StopEvent(FSM.Failure(cause: Throwable), state, data: InitializationData) =>
       data.starter ! StartResponse(Some(new Error(s"Error starting job. ${cause.getMessage}", cause)))
+      log.error(cause, s"Job terminating with error: ${cause.getMessage}")
     case _ =>
       log.info(s"Job shutdown")
 

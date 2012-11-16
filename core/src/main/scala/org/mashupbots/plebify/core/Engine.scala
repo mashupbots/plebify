@@ -39,9 +39,56 @@ sealed trait EngineState
 trait EngineData
 
 /**
- * The Plebify engine manages connectors and jobs.
+ * The plebify engine manages connectors and jobs.
  *
- * @param configName Name of root Plebify element parsed in the AKKA config. Defaults to `plebify`.
+ * == Starting ==
+ * To start [[org.mashupbots.plebify.core.Engine]], create it as an actor and send it a
+ * [[org.mashupbots.plebify.core.StartRequest]] message. A [[org.mashupbots.plebify.core.StartResponse]] message will
+ * be returned when the actor is fully initialized and ready to handle incoming messages.
+ *
+ * {{{
+ * // Create instance
+ * val engine = system.actorOf(Props[Engine], name = "plebify")
+ *
+ * // Start
+ * engine ! StartRequest()
+ *
+ * // Alternatively, you can start and wait for response
+ * val future: Future[StartResponse] = ask(engine, msg).mapTo[StartResponse]
+ * }}}
+ *
+ * During the initialization process, connectors and jobs are started as child actors so that they can be supervised
+ * and monitored.
+ *
+ * == Stopping ==
+ * You can stop the [[org.mashupbots.plebify.core.Engine]] using normal actor termination methods:
+ *
+ * {{{
+ * // Stop
+ * engine.stop()
+ *
+ * // Poison Pill
+ * engine ! PoisonPill()
+ *
+ * // Graceful Stop
+ * try {
+ *   val stopped: Future[Boolean] = gracefulStop(engine, 5 seconds)(system)
+ *   Await.result(stopped, 6 seconds)
+ * } catch {
+ *  case e: akka.pattern.AskTimeoutException => log.error("Timeout waiting for plebify to stop")
+ * }
+ * }}}
+ *
+ * == Configuration ==
+ * It is assumed that configuration is loaded into the Akka actor system. See
+ * [[http://doc.akka.io/docs/akka/2.1.0-RC2/general/configuration.html Akka configuration]] documentation
+ * for more details.
+ *
+ * The root element name defaults to `plebify`. You can override this in the constructor.
+ *
+ * See [[org.mashupbots.plebify.core.config.PlebifyConfig]] for configuration specifics.
+ *
+ * @param configName Name of root plebify element parsed in the AKKA config. Defaults to `plebify`.
  */
 class Engine(val configName: String = "plebify") extends Actor
   with FSM[EngineState, EngineData] with akka.actor.ActorLogging {
@@ -94,7 +141,7 @@ class Engine(val configName: String = "plebify") extends Actor
    * Data used during initialization process
    */
   case class InitializationData(starter: ActorRef) extends EngineData
-  
+
   //*******************************************************************************************************************
   // Transitions
   //*******************************************************************************************************************
@@ -150,14 +197,19 @@ class Engine(val configName: String = "plebify") extends Actor
   }
 
   when(Initialized) {
-    case Event(_, _) => stay
+    case Event(_, _) =>
+      // For the time being, the engine does not support any messages
+      // In the future, we add support for reporting on the status of connectors and jobs as well as performance
+      // statistics.
+      stay
   }
 
   onTermination {
     case StopEvent(FSM.Failure(cause: Throwable), state, data: InitializationData) =>
       data.starter ! StartResponse(Some(new Error(s"Error starting Plebify. ${cause.getMessage}", cause)))
+      log.error(cause, s"Plebify terminating with error: ${cause.getMessage}")
     case _ =>
-      log.info(s"Plebify shutdown")
+      log.info("Plebify shutdown")
   }
 
   private def initializeConnectors(): State = {
