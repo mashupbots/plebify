@@ -75,7 +75,7 @@ case class TaskExecutionConfig(
       List("description", "on-success", "on-fail", "max-retry-count", "retry-interval")))
 
   private val splitId = id.split("-")
-  require(splitId.length >= 2, s"task id '$id' must be in the format 'connector-task'")
+  require(splitId.length >= 2, s"Task id '$id' must be in the format 'connector-task'")
 
   /**
    * Id of the connector that will perform the task
@@ -87,4 +87,14 @@ case class TaskExecutionConfig(
    */
   val taskName = splitId(1)
 
+  /**
+   * Validate this configuration
+   */
+  def validate() {
+    require(!id.isEmpty, "Job Id must contain a value")
+    require(!onSuccess.isEmpty, s"'on-success' not specified for task $id")
+    require(!onFail.isEmpty, s"'on-fail' not specified for task $id")
+    require(maxRetryCount > 0, s"'initialization-timeout' for job $id must be greater than 0")
+    require(retryInterval > 0, s"'max-worker-count' for job $id must be greater than 0")
+  }
 }

@@ -59,6 +59,14 @@ case class ConnectorConfig(
    */
   val actorName = ConnectorConfig.createActorName(id)
 
+  /**
+   * Validate this configuration
+   */
+  def validate() {
+    require(!id.isEmpty, "Connector Id must contain a value")
+    require(!factoryClassName.isEmpty, "Id must contain a value")
+    require(initializationTimeout > 0, "initialization-timeout must be greater than 0")
+  }  
 }
 
 object ConnectorConfig {

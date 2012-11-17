@@ -81,6 +81,41 @@ case class JobConfig(
    */
   val actorName = JobConfig.createActorName(id)
 
+  /**
+   * Validate this configuration
+   */
+  def validate() {
+    require(!id.isEmpty, "Job Id must contain a value")
+    require(!events.isEmpty, s"No 'events' defined  job $id")
+    require(!tasks.isEmpty, s"No 'tasks' defined for job $id")
+
+    require(initializationTimeout > 0, s"'initialization-timeout' for job $id must be greater than 0")
+    require(maxWorkerCount > 0, s"'max-worker-count' for job $id must be greater than 0")
+    require(queueSize >= 0, s"'queue-size' for job $id must be greater than or equals 0")
+    require(rescheduleInterval >= 0, s"'reschedule-interval' for job $id must be greater than or equals 0")
+
+    events.foreach(e => e.validate())
+    tasks.foreach(t => t.validate())
+
+    // check onSuccess/onFail for tasks
+    tasks.foreach(t => {
+      checkCommand(t.onSuccess)
+      checkCommand(t.onFail)
+    })
+  }
+
+  private def checkCommand(command: String) {
+    command match {
+      case "next" => Unit
+      case "success" => Unit
+      case "fail" => Unit
+      case taskId: String => {
+        if (tasks.exists(t => t.id == taskId)) Unit
+        else throw new Error(s"Task id '$taskId' not defined in job '$id'")
+      }
+    }
+  }
+
 }
 
 /**

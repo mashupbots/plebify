@@ -55,7 +55,7 @@ case class EventSubscriptionConfig(
     ConfigUtil.getParameters(config, keyPath, List("description", "initialization-timeout")))
 
   private val splitId = id.split("-")
-  require(splitId.length >= 2, s"job id '$id' must be in the format 'connector-event'")
+  require(splitId.length >= 2, s"Event '$id' must be in the format 'connector-event'")
 
   /**
    * Id of the connector to listen to
@@ -66,4 +66,12 @@ case class EventSubscriptionConfig(
    * Name of the connector event to which to subscribe 
    */
   val eventName = splitId(1)
+  
+  /**
+   * Validate this configuration
+   */
+  def validate() {
+    require(!id.isEmpty, "Event Id must contain a value")
+    require(initializationTimeout > 0, s"'initialization-timeout' for job $id must be greater than 0")
+  }    
 }

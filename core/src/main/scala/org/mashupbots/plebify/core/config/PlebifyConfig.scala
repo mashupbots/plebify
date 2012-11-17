@@ -81,18 +81,30 @@ case class PlebifyConfig(
     PlebifyConfig.loadJobs(config, s"$keyPath.jobs"))
 
   /**
-   * Validate the configuration
+   * Validate this configuration
    */
-  private def validate() {
-    // Make sure we have connectors defined
-    require(connectors.size > 0, "No 'connectors' defined.")
+  def validate() {
+    require(!connectors.isEmpty, "No 'connectors' defined.")
+    require(!jobs.isEmpty, "No 'jobs' defined.")
 
-    // Make sure we have jobs defined
-    require(jobs.size > 0, "No 'jobs' defined.")
+    connectors.foreach(c => c.validate())
+    jobs.foreach(j => j.validate())
+
+    // Check connector ids
+    jobs.foreach(j => {
+      j.events.foreach(e => {
+        if (!connectors.exists(c => c.id == e.connectorId))
+          throw new Error(s"Connector id '${e.connectorId}' in event '${e.id}' of job '${j.id}' does not exist.")
+      })
+
+      j.tasks.foreach(t => {
+        if (!connectors.exists(c => c.id == t.connectorId))
+          throw new Error(s"Connector id '${t.connectorId}' in task '${t.id}' of job '${j.id}' does not exist.")
+      })
+    })
   }
 
   validate();
-
 }
 
 object PlebifyConfig {
