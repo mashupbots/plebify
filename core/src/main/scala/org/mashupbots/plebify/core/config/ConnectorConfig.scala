@@ -24,12 +24,15 @@ import scala.collection.JavaConversions._
  *
  * @param id Unique id of this connector
  * @param factoryClassName Full class path to factory class that will instance our actor
+ * @param initializationTimeout Number of seconds the engine will wait for the
+ *  [[org.mashupbots.plebify.core.StartResponse]] message after sending the [[org.mashupbots.plebify.core.StartRequest]]
  * @param params Parameters for the factory class
  */
 case class ConnectorConfig(
   id: String,
   description: String,
   factoryClassName: String,
+  initializationTimeout: Int,
   params: Map[String, String]) extends Extension {
 
   /**
@@ -43,13 +46,15 @@ case class ConnectorConfig(
     id,
     ConfigUtil.getString(config, s"$keyPath.description", ""),
     config.getString(s"$keyPath.factory-class-name"),
-    ConfigUtil.getParameters(config, keyPath, List("factory-class-name", "description")))
+    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 2),
+    ConfigUtil.getParameters(config, keyPath,
+      List("factory-class-name", "description", "initialization-timeout")))
 
   /**
    * Name of the actor representing this connector
    */
   val actorName = ConnectorConfig.createActorName(id)
- 
+
 }
 
 object ConnectorConfig {

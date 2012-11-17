@@ -29,6 +29,7 @@ import scala.collection.JavaConversions._
  *     file {
  *       description = ""
  *       factory-class-name = ""
+ *       initialization-timeout = 5
  *       param1 = ""
  *     }
  *

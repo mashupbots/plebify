@@ -24,12 +24,15 @@ import scala.collection.JavaConversions._
  *
  * @param id Unique id of this job
  * @param description Description of this job
+ * @param initializationTimeout Number of seconds the engine will wait for the
+ *  [[org.mashupbots.plebify.core.StartResponse]] message after sending the [[org.mashupbots.plebify.core.StartRequest]]
  * @param events Collection of events to which this job is subscribed. When an event is fired, the tasks are executed
  * @param tasks Work to be performed by this job
  */
 case class JobConfig(
   id: String,
   description: String,
+  initializationTimeout: Int,
   events: Seq[EventSubscriptionConfig],
   tasks: Seq[TaskExecutionConfig]) extends Extension {
 
@@ -43,6 +46,7 @@ case class JobConfig(
   def this(id: String, config: Config, keyPath: String) = this(
     id,
     ConfigUtil.getString(config, s"$keyPath.description", ""),
+    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 2),
     JobConfig.loadEvents(config, s"$keyPath.on"),
     JobConfig.loadTasks(config, s"$keyPath.do"))
 

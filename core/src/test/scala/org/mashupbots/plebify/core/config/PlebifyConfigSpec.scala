@@ -36,6 +36,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
             file {
               description = "file system"
               factory-class-name = "org.mashupbots.plebify.fileConnector"
+              initialization-timeout = 5
               param1 = "a"
             }
     
@@ -52,6 +53,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
               on {
                 http-request {
                   description = "on http request #1"
+                  initialization-timeout = 5
                   param1 = "aaa"
 		  	    }
     
@@ -98,6 +100,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       fileConnector.id should equal("file")
       fileConnector.factoryClassName should equal("org.mashupbots.plebify.fileConnector")
       fileConnector.description should equal("file system")
+      fileConnector.initializationTimeout should equal(5)
       fileConnector.params.size should equal(1)
       fileConnector.params("param1") should equal("a")
 
@@ -105,6 +108,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       httpConnector.id should equal("http")
       httpConnector.description should equal("")
       httpConnector.factoryClassName should equal("org.mashupbots.plebify.httpConnector")
+      httpConnector.initializationTimeout should equal(2)
       httpConnector.params.size should equal(2)
       httpConnector.params("param1") should equal("a")
       httpConnector.params("param2") should equal("b")
@@ -112,6 +116,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       val job1 = cfg.jobs.find(e => e.id == "job1").get
       job1.id should equal("job1")
       job1.description should equal("this is the first job")
+      job1.initializationTimeout should equal(5)
       job1.events.size should equal(2)
       job1.tasks.size should equal(2)
 
@@ -148,6 +153,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       val job2 = cfg.jobs.find(e => e.id == "job2").get
       job2.id should equal("job2")
       job2.description should equal("")
+      job2.initializationTimeout should equal(2)
 
     }
 
