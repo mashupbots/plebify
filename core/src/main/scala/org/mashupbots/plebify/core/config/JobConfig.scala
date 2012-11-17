@@ -25,7 +25,17 @@ import scala.collection.JavaConversions._
  * @param id Unique id of this job
  * @param description Description of this job
  * @param initializationTimeout Number of seconds the engine will wait for the
- *  [[org.mashupbots.plebify.core.StartResponse]] message after sending the [[org.mashupbots.plebify.core.StartRequest]]
+ *   [[org.mashupbots.plebify.core.StartResponse]] message after sending the [[org.mashupbots.plebify.core.StartRequest]]
+ * @param maxWorkerCount Maximum number of active [[org.mashupbots.plebify.core.JobWorker]] actors that can be
+ *   concurrently active (executing tasks).
+ * @param maxWorkerStrategy Strategy to use for handling situations where `maxWorkerCount` has been reached and more
+ *   [[org.mashupbots.plebify.core.EventNotification]]s are received.
+ * @param queueSize Maximum number of event notification messages to queue if `maxWorkerCount`
+ *   has been reached. If 0, all excess messages will be ignored. This setting is only applicable if
+ *   `maxWorkerStrategy` is `queue`.
+ * @param rescheduleInterval Number of seconds to resechedule an event notification for
+ *   re-process if `maxWorkerCount` has been reached. This setting is only applicable if `maxWorkerStrategy` is
+ *   `reschedule`.
  * @param events Collection of events to which this job is subscribed. When an event is fired, the tasks are executed
  * @param tasks Work to be performed by this job
  */
@@ -33,6 +43,10 @@ case class JobConfig(
   id: String,
   description: String,
   initializationTimeout: Int,
+  maxWorkerCount: Int,
+  maxWorkerStrategy: MaxWorkerStrategy.Value,
+  queueSize: Int,
+  rescheduleInterval: Int,
   events: Seq[EventSubscriptionConfig],
   tasks: Seq[TaskExecutionConfig]) extends Extension {
 
@@ -40,8 +54,12 @@ case class JobConfig(
    * Read configuration from AKKA's `application.conf`
    *
    * Defaults:
-   *  - `description` = empty string.
-   *  - `initialization-timeout` = 3 seconds.
+   *  - `description` = empty string
+   *  - `initialization-timeout` = 3 seconds
+   *  - `max-worker-count` = 5 workers
+   *  - `max-worker-strategy` = queue
+   *  - `queue-size` = 100 messages
+   *  - `reschedule-interval` = 5 seconds
    *
    * @param id Unique id of this job
    * @param config Configuration
@@ -51,6 +69,10 @@ case class JobConfig(
     id,
     ConfigUtil.getString(config, s"$keyPath.description", ""),
     ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 3),
+    ConfigUtil.getInt(config, s"$keyPath.max-worker-count", 5),
+    MaxWorkerStrategy.withName(ConfigUtil.getString(config, s"$keyPath.max-worker-strategy", "queue")),
+    ConfigUtil.getInt(config, s"$keyPath.queue-size", 100),
+    ConfigUtil.getInt(config, s"$keyPath.reschedule-interval", 5),
     JobConfig.loadEvents(config, s"$keyPath.on"),
     JobConfig.loadTasks(config, s"$keyPath.do"))
 
@@ -58,6 +80,28 @@ case class JobConfig(
    * Name of the actor representing this job
    */
   val actorName = JobConfig.createActorName(id)
+
+}
+
+/**
+ * Defines how a job is to handle event notifications when the maximum number of workers have been reached.
+ */
+object MaxWorkerStrategy extends Enumeration {
+  type MaxWorkerStrategy = Value
+
+  /**
+   * Queue new [[org.mashupbots.plebify.core.EventNotification]]s for later processing.
+   *
+   * Event notifications will be immediately processed when a JobWorker becomes available.
+   */
+  val Queue = Value("queue")
+
+  /**
+   * Reschedule new [[org.mashupbots.plebify.core.EventNotification]]s
+   *
+   * Event notifications will have to wait for a number seconds before it is retried.
+   */
+  val Reschedule = Value("reschedule")
 
 }
 
@@ -99,3 +143,4 @@ object JobConfig {
    */
   def createActorName(jobId: String): String = s"job-$jobId"
 }
+

@@ -15,6 +15,7 @@
 //
 package org.mashupbots.plebify.core
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 import org.mashupbots.plebify.core.config.ConnectorConfig
@@ -22,6 +23,8 @@ import org.mashupbots.plebify.core.config.JobConfig
 
 import akka.actor.Actor
 import akka.actor.FSM
+import akka.pattern.ask
+import akka.pattern.pipe
 
 /**
  * FSM states for [[org.mashupbots.plebify.core.JobWorker]]
@@ -37,24 +40,22 @@ trait JobWorkerData
  * Worker actor instanced by [[org.mashupbots.plebify.core.Job]] to execute tasks.
  *
  * ==Starting==
- * [[org.mashupbots.plebify.core.JobWorker]] has no initialization processing.  As such, it does '''not''' support a
- * [[org.mashupbots.plebify.core.StartRequest]] message.
- *
- * To start start task execution, send a [[org.mashupbots.plebify.core.EventNotification]] message. This is a one way
- * message and not responses will be returned to the sender.
- *
- * Alternatively, if you require a response, send a [[org.mashupbots.plebify.core.JobWorkerRequest]] message.
- * A [[org.mashupbots.plebify.core.JobWorkerResponse]] message will be returned when processing is finished.
+ * When [[org.mashupbots.plebify.core.JobWorker]] starts, it immediately starts processing the specified event
+ * notification message.
  *
  * ==Stopping==
- * By default, the JobWorker will self terminate after task execution; i.e. after processing a single
- * [[org.mashupbots.plebify.core.EventNotification]] or [[org.mashupbots.plebify.core.JobWorkerRequest]] message.
+ * When processing of event notification message is finished, this actor self terminates.
  *
- * If using in a router scenario, as specified in the [[org.mashupbots.plebify.core.JobConfig]], it will '''NOT'''
- * self terminate.
+ * @param jobConfig Job configuration containing the list of tasks to execute
+ * @param msg Event notification message to process
  */
-class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends Actor
+class JobWorker(jobConfig: JobConfig, msg: EventNotification) extends Actor
   with FSM[JobWorkerState, JobWorkerData] with akka.actor.ActorLogging {
+
+  import context.dispatcher
+
+  private case class Start() extends NotificationMessage
+  private case class Retry() extends NotificationMessage
 
   //*******************************************************************************************************************
   // State
@@ -80,14 +81,15 @@ class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends 
   /**
    * Details the progress of job execution; i.e. which task is being executed.
    *
-   *  @param idx Index of the current task being executed
+   * @param idx Index of the current task being executed
+   * @param retryCount Current number of retries
    */
-  case class Progress(idx: Int, jobConfig: JobConfig) extends JobWorkerData {
+  case class Progress(idx: Int = 0, retryCount: Int = 0) extends JobWorkerData {
 
     /**
-     * True if we have finished processing and there are no more tasks to execute
+     * True if the current task is the last task in the list
      */
-    val isFinished: Boolean = idx >= jobConfig.tasks.size
+    val isLast: Boolean = (idx == jobConfig.tasks.size - 1)
 
     /**
      * Current task execution configuration to run
@@ -99,6 +101,21 @@ class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends 
      */
     val errorMsg = s"Error executing task '${currentTask.taskName}' in connector '${currentTask.connectorId}' " +
       s"for job '${jobConfig.id}'. "
+
+    def nextTask(): Progress = {
+      this.copy(idx = idx + 1, retryCount = 0)
+    }
+
+    def gotoTask(taskId: String): Progress = {
+      val newIdx = jobConfig.tasks.indexWhere(t => t.id == taskId)
+      if (newIdx == -1) throw new Error(s"Task id '${taskId}' not found")
+      this.copy(idx = newIdx, retryCount = 0)
+    }
+
+    def retryTask(): Progress = {
+      this.copy(retryCount = retryCount + 1)
+    }
+
   }
 
   //*******************************************************************************************************************
@@ -107,75 +124,103 @@ class JobWorker(val jobConfig: JobConfig, val event: EventNotification) extends 
   startWith(Idle, Uninitialized)
 
   when(Idle) {
-    case Event(_, Uninitialized) => {
+    case Event(msg: Start, Uninitialized) => {
       log.info(s"Executing tasks for job '${jobConfig.id}'")
-
-      val progress = Progress(0, jobConfig)
-      executeTask(progress)
-      goto(Active) using progress forMax (5 seconds)
+      goto(Active) using executeCurrentTask(Progress())
     }
-
+    case unknown =>
+      log.debug("Recieved unknown message while Idle: {}", unknown.toString)
+      stay
   }
 
   when(Active) {
-    // When we get result from the execution of the current task, process it and move to next task
     case Event(result: TaskExecutionResponse, progress: Progress) => {
-      // Post task execution processing
-      if (!result.isSuccess) {
-        // TODO - configuration options for error handling. Just log for now
-        log.error(progress.errorMsg, result.error.get)
-      }
-
-      // Execute next task
-      val next = progress.copy(idx = progress.idx + 1)
-      if (next.isFinished) {
-        // Finished - no more tasks to run
-        stop(FSM.Normal, Uninitialized)
-      } else {
-        executeTask(next)
-        stay using next forMax (5 seconds)
-      }
+      processResult(progress, result.error)
     }
-
-    case Event(StateTimeout, progress: Progress) => {
-      stop(FSM.Failure("Connector timed out"), Uninitialized)
+    case Event(msg: akka.actor.Status.Failure, progress: Progress) => {
+      processResult(progress, Some(msg.cause))
     }
-
+    case Event(result: Retry, progress: Progress) => {
+      stay using executeCurrentTask(progress)
+    }
+    case unknown =>
+      log.debug("Recieved unknown message while Active: {}", unknown.toString)
+      stay
   }
 
   onTermination {
-    case StopEvent(FSM.Normal, state, data) =>
-      log.info(s"Task execution for job '${jobConfig.id}' finished")
-
-    case StopEvent(FSM.Shutdown, state, data) =>
-      log.info(s"Shutting down task execution job '${jobConfig.id}'")
-
-    case StopEvent(FSM.Failure(cause: String), state, progress: Progress) =>
-      log.error(progress.errorMsg + cause)
+    case StopEvent(FSM.Normal, state, progress: Progress) =>
+      log.info("JobWorker success")
+    case StopEvent(FSM.Failure(cause: Throwable), state, progress: Progress) =>
+      log.error(cause, s"JobWorker failed with error: ${cause.getMessage}")
+    case _ =>
+      log.info(s"JobWorker shutdown")
   }
 
   /**
-   * Sends a message to the connector in order to execute the current task
+   * Sends a [[org.mashupbots.plebify.core.TaskExecutionRequest]] message to the connector in order to execute the
+   * current task
    *
    * @param progress Progress of executing the current task list
+   * @returns `progress` that was passed in so that we can chain commands
    */
-  private def executeTask(progress: Progress) {
+  private def executeCurrentTask(progress: Progress): Progress = {
     val taskExecutionConfig = progress.currentTask
     val connectorActorName = ConnectorConfig.createActorName(taskExecutionConfig.connectorId)
-    val connectorActorRef = context.actorFor(s"../../$connectorActorName")
-    if (connectorActorRef.isTerminated) {
+    val connector = context.actorFor(s"../../$connectorActorName")
+    if (connector.isTerminated) {
       throw new Error(progress.errorMsg + s"Connector '$connectorActorName' is terminated")
     }
 
-    connectorActorRef ! TaskExecutionRequest(taskExecutionConfig)
+    val future = ask(connector, TaskExecutionRequest(taskExecutionConfig))(5 seconds).mapTo[TaskExecutionResponse]
+    future pipeTo self
+
+    progress
+  }
+
+  /**
+   * Process the result for the future setup in `executeTask`
+   *
+   * @param progress Current progress
+   * @param error Optional error. If empty, assume success.
+   */
+  private def processResult(progress: Progress, error: Option[Throwable]): State = {
+    if (error.isDefined && progress.retryCount < progress.currentTask.maxRetryCount) {
+      log.error(error.get, "Retrying task {} because of error {}", progress.currentTask.id, error.get.getMessage)
+      context.system.scheduler.scheduleOnce(jobConfig.rescheduleInterval seconds, self, Retry())
+      stay using progress.retryTask()
+    } else {
+      val command = if (error.isEmpty) progress.currentTask.onSuccess else progress.currentTask.onFail
+      command match {
+        case "next" => {
+          if (progress.isLast) {
+            stop(FSM.Normal)
+          } else {
+            stay using executeCurrentTask(progress.nextTask())
+          }
+        }
+        case "success" => {
+          stop(FSM.Normal)
+        }
+        case "error" => {
+          stop(FSM.Failure(error.get))
+        }
+        case taskId: String => {
+          stay using executeCurrentTask(progress.gotoTask(taskId))
+        }
+      }
+    }
   }
 
   //*******************************************************************************************************************
   // Boot up
   //*******************************************************************************************************************
-  log.debug(s"Job worker ${jobConfig.id} Actor '${context.self.path.toString}'")
   initialize
 
+  // Kick start processing with a message to ourself
+  override def preStart {
+    self ! Start()
+  }
 }
 
 

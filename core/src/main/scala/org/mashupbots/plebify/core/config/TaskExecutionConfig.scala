@@ -26,15 +26,39 @@ import com.typesafe.config.Config
  *
  * @param id Unique id of this task. Must be in the format `{connector id}-{task}[-optional-text]`.
  * @param description Description of this task
+ * @param onSuccess Determines the next step if this task is completed with no errors. Valid values are:
+ *  - `next` to execute the next task or terminate with success if this is the last task
+ *  - `success` to stop task execution and terminate with no errors
+ *  - `fail` to stop task execution and terminate with an error
+ *  - id of the next task to run.
+ * @param onFail Determines the next step if this task is not completed or has errors. Valid values are:
+ *  - `next` to execute the next task or stop with success if this is the last task
+ *  - `success` to stop task execution and terminate with no errors
+ *  - `fail` to stop task execution and terminate with an error
+ *  - id of the next task to run.
+ * @param maxRetryCount The maximum number of times a task is re-executed when an error response is received; before the
+ *   task is deemed to have failed.
+ * @param retryInterval The number of seconds between retries.
  * @param params Parameters for this task
  */
 case class TaskExecutionConfig(
   id: String,
   description: String,
+  onSuccess: String,
+  onFail: String,
+  maxRetryCount: Int,
+  retryInterval: Int,
   params: Map[String, String]) extends Extension {
 
   /**
    * Read configuration from AKKA's `application.conf`
+   *
+   * Defaults:
+   *  - descripton = empty string
+   *  - on-success = next
+   *  - on-error = fail
+   *  - max-retry-count = 3
+   *  - retry-interval = 3 seconds
    *
    * @param id Unique identifier of this task. Must be in the format `{connector id}-{task}[-optional-text]`.
    * @param config Configuration
@@ -43,7 +67,12 @@ case class TaskExecutionConfig(
   def this(id: String, config: Config, keyPath: String) = this(
     id,
     ConfigUtil.getString(config, s"$keyPath.description", ""),
-    ConfigUtil.getParameters(config, keyPath, List("description")))
+    ConfigUtil.getString(config, s"$keyPath.on-success", "next"),
+    ConfigUtil.getString(config, s"$keyPath.on-fail", "stop"),
+    ConfigUtil.getInt(config, s"$keyPath.max-retry-count", 3),
+    ConfigUtil.getInt(config, s"$keyPath.retry-interval", 3),
+    ConfigUtil.getParameters(config, keyPath,
+      List("description", "on-success", "on-fail", "max-retry-count", "retry-interval")))
 
   private val splitId = id.split("-")
   require(splitId.length >= 2, s"task id '$id' must be in the format 'connector-task'")

@@ -17,19 +17,22 @@ package org.mashupbots.plebify.core
 
 import java.util.UUID
 
+import scala.Some.apply
+import scala.collection.immutable.Queue
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
 import org.mashupbots.plebify.core.config.ConnectorConfig
 import org.mashupbots.plebify.core.config.JobConfig
+import org.mashupbots.plebify.core.config.MaxWorkerStrategy
 
 import akka.actor.Actor
 import akka.actor.ActorRef
 import akka.actor.FSM
 import akka.actor.Props
+import akka.actor.Terminated
 import akka.pattern.ask
 import akka.pattern.pipe
-import akka.util.Timeout.durationToTimeout
 
 /**
  * FSM states for [[org.mashupbots.plebify.core.Job]]
@@ -64,14 +67,17 @@ trait JobData
  *
  * This master/worker pattern allows more than one event notification to be processed concurrently. The number of
  * concurrent workers by settings in [[org.mashupbots.plebify.core.config.JobConfig]].
- *  - `workerConcurrencyMethod`
- *  - `workerCount`
+ *  - `workerConcurrencyStrategy`
+ *  - `workerConcurrencyCount`
  *
- * If `workerConcurrencyMethod` is `router`, [[org.mashupbots.plebify.core.JobWorker]] is instanced `workerCount`
- * times and used behind an Akka router.
+ * If `workerConcurrencyStrategy` is `router`, [[org.mashupbots.plebify.core.JobWorker]] is instanced
+ * `workerConcurrencyCount` times and used behind an Akka router.
  *
- * If `workerConcurrencyMethod` is `highWaterMark`, [[org.mashupbots.plebify.core.EventNotification]] will be ignored
- * once the number of JobWorker exceeds `workerCount`.  This is the default setting with a `workerCount` of 5.
+ * If `workerConcurrencyStrategy` is `ceiling`, [[org.mashupbots.plebify.core.EventNotification]]s will be ignored
+ * once the number of [[org.mashupbots.plebify.core.JobWorker]] exceeds `workerConcurrencyCount`.  This is the default
+ * setting with a `workerConcurrencyCount` of 5. This means that if there are 5
+ * [[org.mashupbots.plebify.core.JobWorker]] actors running, any new trigger events will be ignored until one of
+ * the [[org.mashupbots.plebify.core.JobWorker]] terminates and finishes processing.
  *
  * @param jobConfig Configuration for the job represented by this Actor
  */
@@ -95,9 +101,9 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
   case object Initializing extends JobState
 
   /**
-   * Job is initialized and ready to receive events and execute tasks
+   * Job is initialized and ready to process event notifications
    */
-  case object Initialized extends JobState
+  case object Active extends JobState
 
   //*******************************************************************************************************************
   // Data
@@ -111,6 +117,29 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
    * Data used during initialization process
    */
   case class InitializationData(starter: ActorRef) extends JobData
+
+  /**
+   * Data used during the [[org.mashupbots.plebify.core.Job.Active]] state
+   *
+   * @param workerCount Number of [[org.mashupbots.plebify.core.JobWorker]]s started and active.
+   * @param queue Queue for storing event notifications when `workerCount` exceeds the maximum.
+   */
+  case class ActiveData(workerCount: Int, queue: Queue[EventNotification]) extends JobData {
+
+    def incrementWokerCount(): ActiveData = {
+      this.copy(workerCount = workerCount + 1)
+    }
+
+    def decrementWokerCount(): ActiveData = {
+      if (workerCount > 0) this.copy(workerCount = workerCount - 1)
+      else this.copy(workerCount = 0)
+    }
+
+    def enqueue(msg: EventNotification): ActiveData = {
+      this.copy(queue = queue.enqueue(msg))
+    }
+
+  }
 
   //*******************************************************************************************************************
   // Transitions
@@ -139,7 +168,7 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
         stop(FSM.Failure(new Error(s"Error subscribing to one or more events.")))
       } else {
         data.starter ! StartResponse()
-        goto(Initialized)
+        goto(Active) using ActiveData(0, Queue[EventNotification]())
       }
     case Event(msg: akka.actor.Status.Failure, data: InitializationData) =>
       stop(FSM.Failure(new Error(s"Error while waiting for event subscription futures. ${msg.cause.getMessage}",
@@ -150,8 +179,42 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
       stay
   }
 
-  when(Initialized) {
-    case Event(_, _) => stay
+  when(Active) {
+    case Event(msg: EventNotification, data: ActiveData) =>
+      if (data.workerCount < jobConfig.maxWorkerCount) {
+        // We have not exceeded the max, so start JobWorker and increment the count
+        startWorker(msg)
+        stay using data.incrementWokerCount()
+      } else {
+        // We have exceeded the max, so queue or reschedule
+        jobConfig.maxWorkerStrategy match {
+          case MaxWorkerStrategy.Queue => {
+            if (data.queue.size < jobConfig.queueSize) {
+              log.info("Queueing {} because all workers are busy.", msg.toString)
+              stay using data.enqueue(msg)
+            } else {
+              log.info("Ignoring {} because max queue size of {} has been reached.", msg.toString, jobConfig.queueSize)
+              stay
+            }
+          }
+          case MaxWorkerStrategy.Reschedule => {
+            log.info("Rescheduling {} because all workers are busy.", msg.toString)
+            context.system.scheduler.scheduleOnce(jobConfig.rescheduleInterval seconds, self, msg)
+            stay
+          }
+        }
+      }
+
+    case Event(msg: Terminated, data: ActiveData) =>
+      // A JobWorker has terminated so reduce the count if queue is empty
+      // If not empty, start a new JobWorker to process queue item
+      if (data.queue.isEmpty) {
+        stay using data.decrementWokerCount()
+      } else {
+        val (msg, newQueue) = data.queue.dequeue
+        startWorker(msg)
+        stay using data.copy(queue = newQueue)
+      }
   }
 
   onTermination {
@@ -160,7 +223,6 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
       log.error(cause, s"Job terminating with error: ${cause.getMessage}")
     case _ =>
       log.info(s"Job shutdown")
-
   }
 
   private def filterErrors(msg: Seq[_]): Seq[StartResponse] = {
@@ -185,7 +247,7 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
     }
   }
 
-  private def unsubscribe() = {
+  private def unsubscribe() {
     jobConfig.events.foreach(eventConfig => {
       val msg = s"Job ${jobConfig.id} unsubscribing from ${eventConfig.id}"
       log.debug(msg)
@@ -199,6 +261,16 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
         case e: Throwable => log.error(s"Ignoring error while $msg. ${e.getMessage}.", e)
       }
     })
+  }
+
+  private def startWorker(msg: EventNotification) {
+    val worker = context.actorOf(Props(new JobWorker(jobConfig, msg)), "jobworker-" + UUID.randomUUID().toString)
+
+    // Register death watch so that we will receive a Terminate message when the actor stops
+    context.watch(worker)
+
+    // Send the event notification
+    worker ! msg
   }
 
   //*******************************************************************************************************************

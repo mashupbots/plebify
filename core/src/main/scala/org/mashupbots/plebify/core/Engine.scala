@@ -120,14 +120,9 @@ class Engine(val configName: String = "plebify") extends Actor
   case object InitializingJobs extends EngineState
 
   /**
-   * Engine is initialized and ready
+   * Engine is initialized and ready to process messages
    */
-  case object Initialized extends EngineState
-
-  /**
-   * Error occurred and actor is in the process of shutting down
-   */
-  case object Error extends EngineState
+  case object Active extends EngineState
 
   //*******************************************************************************************************************
   // Data
@@ -186,7 +181,7 @@ class Engine(val configName: String = "plebify") extends Actor
         stop(FSM.Failure(new Error("Error starting one or more jobs.")))
       } else {
         data.starter ! StartResponse()
-        goto(Initialized)
+        goto(Active)
       }
     case Event(msg: akka.actor.Status.Failure, data: InitializationData) =>
       stop(FSM.Failure(new Error(s"Error while waiting for job start futures. ${msg.cause.getMessage}", msg.cause)))
@@ -196,7 +191,7 @@ class Engine(val configName: String = "plebify") extends Actor
       stay
   }
 
-  when(Initialized) {
+  when(Active) {
     case Event(_, _) =>
       // For the time being, the engine does not support any messages
       // In the future, we add support for reporting on the status of connectors and jobs as well as performance
