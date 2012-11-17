@@ -55,7 +55,7 @@ case class JobConfig(
    *
    * Defaults:
    *  - `description` = empty string
-   *  - `initialization-timeout` = 3 seconds
+   *  - `initialization-timeout` = 5 seconds
    *  - `max-worker-count` = 5 workers
    *  - `max-worker-strategy` = queue
    *  - `queue-size` = 100 messages
@@ -68,7 +68,7 @@ case class JobConfig(
   def this(id: String, config: Config, keyPath: String) = this(
     id,
     ConfigUtil.getString(config, s"$keyPath.description", ""),
-    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 3),
+    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 5),
     ConfigUtil.getInt(config, s"$keyPath.max-worker-count", 5),
     MaxWorkerStrategy.withName(ConfigUtil.getString(config, s"$keyPath.max-worker-strategy", "queue")),
     ConfigUtil.getInt(config, s"$keyPath.queue-size", 100),
@@ -86,8 +86,8 @@ case class JobConfig(
    */
   def validate() {
     require(!id.isEmpty, "Job Id must contain a value")
-    require(!events.isEmpty, s"No 'events' defined  job $id")
-    require(!tasks.isEmpty, s"No 'tasks' defined for job $id")
+    require(!events.isEmpty, s"No 'events' defined in job '$id'")
+    require(!tasks.isEmpty, s"No 'tasks' defined in job '$id'")
 
     require(initializationTimeout > 0, s"'initialization-timeout' for job $id must be greater than 0")
     require(maxWorkerCount > 0, s"'max-worker-count' for job $id must be greater than 0")
@@ -111,7 +111,7 @@ case class JobConfig(
       case "fail" => Unit
       case taskId: String => {
         if (tasks.exists(t => t.id == taskId)) Unit
-        else throw new Error(s"Task id '$taskId' not defined in job '$id'")
+        else throw new Error(s"Unrecognised command '$command' in task '$taskId' of job '$id'")
       }
     }
   }

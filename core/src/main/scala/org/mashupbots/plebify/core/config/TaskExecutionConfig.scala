@@ -26,6 +26,7 @@ import com.typesafe.config.Config
  *
  * @param id Unique id of this task. Must be in the format `{connector id}-{task}[-optional-text]`.
  * @param description Description of this task
+ * @param executionTimeout Number of seconds to wait for a response form the task before declaring a timeout error
  * @param onSuccess Determines the next step if this task is completed with no errors. Valid values are:
  *  - `next` to execute the next task or terminate with success if this is the last task
  *  - `success` to stop task execution and terminate with no errors
@@ -44,6 +45,7 @@ import com.typesafe.config.Config
 case class TaskExecutionConfig(
   id: String,
   description: String,
+  executionTimeout: Int,
   onSuccess: String,
   onFail: String,
   maxRetryCount: Int,
@@ -54,7 +56,8 @@ case class TaskExecutionConfig(
    * Read configuration from AKKA's `application.conf`
    *
    * Defaults:
-   *  - descripton = empty string
+   *  - description = empty string
+   *  - execution-timeout = 5 seconds
    *  - on-success = next
    *  - on-error = fail
    *  - max-retry-count = 3
@@ -67,12 +70,13 @@ case class TaskExecutionConfig(
   def this(id: String, config: Config, keyPath: String) = this(
     id,
     ConfigUtil.getString(config, s"$keyPath.description", ""),
+    ConfigUtil.getInt(config, s"$keyPath.execution-timeout", 5),
     ConfigUtil.getString(config, s"$keyPath.on-success", "next"),
-    ConfigUtil.getString(config, s"$keyPath.on-fail", "stop"),
+    ConfigUtil.getString(config, s"$keyPath.on-fail", "fail"),
     ConfigUtil.getInt(config, s"$keyPath.max-retry-count", 3),
     ConfigUtil.getInt(config, s"$keyPath.retry-interval", 3),
     ConfigUtil.getParameters(config, keyPath,
-      List("description", "on-success", "on-fail", "max-retry-count", "retry-interval")))
+      List("description", "execution-timeout", "on-success", "on-fail", "max-retry-count", "retry-interval")))
 
   private val splitId = id.split("-")
   require(splitId.length >= 2, s"Task id '$id' must be in the format 'connector-task'")

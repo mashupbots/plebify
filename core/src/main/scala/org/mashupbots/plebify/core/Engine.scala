@@ -39,7 +39,10 @@ sealed trait EngineState
 trait EngineData
 
 /**
- * The plebify engine manages connectors and jobs.
+ * The plebify engine manages connectors and jobs for you.
+ * 
+ * The engine uses immutable configuration. If you wish to change any configuration, you will have to stop and 
+ * restart the engine.
  *
  * == Starting ==
  * To start [[org.mashupbots.plebify.core.Engine]], create it as an actor and send it a

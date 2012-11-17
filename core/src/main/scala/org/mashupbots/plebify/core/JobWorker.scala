@@ -87,7 +87,7 @@ class JobWorker(jobConfig: JobConfig, msg: EventNotification) extends Actor
   case class Progress(idx: Int = 0, retryCount: Int = 0) extends JobWorkerData {
 
     /**
-     * True if the current task is the last task in the list
+     * True if the current task is the last task to execute in the list
      */
     val isLast: Boolean = (idx == jobConfig.tasks.size - 1)
 
@@ -102,16 +102,25 @@ class JobWorker(jobConfig: JobConfig, msg: EventNotification) extends Actor
     val errorMsg = s"Error executing task '${currentTask.taskName}' in connector '${currentTask.connectorId}' " +
       s"for job '${jobConfig.id}'. "
 
+    /**
+     * Returns a new Progress object pointing to the next task and restarts the retry count
+     */
     def nextTask(): Progress = {
       this.copy(idx = idx + 1, retryCount = 0)
     }
 
+    /**
+     * Returns a new Progress object pointing to the specified task id and restarts the retry count
+     */
     def gotoTask(taskId: String): Progress = {
       val newIdx = jobConfig.tasks.indexWhere(t => t.id == taskId)
       if (newIdx == -1) throw new Error(s"Task id '${taskId}' not found")
       this.copy(idx = newIdx, retryCount = 0)
     }
 
+    /**
+     * Increments the retry count
+     */
     def retryTask(): Progress = {
       this.copy(retryCount = retryCount + 1)
     }
@@ -165,14 +174,15 @@ class JobWorker(jobConfig: JobConfig, msg: EventNotification) extends Actor
    * @returns `progress` that was passed in so that we can chain commands
    */
   private def executeCurrentTask(progress: Progress): Progress = {
-    val taskExecutionConfig = progress.currentTask
-    val connectorActorName = ConnectorConfig.createActorName(taskExecutionConfig.connectorId)
+    val taskConfig = progress.currentTask
+    val connectorActorName = ConnectorConfig.createActorName(taskConfig.connectorId)
     val connector = context.actorFor(s"../../$connectorActorName")
     if (connector.isTerminated) {
       throw new Error(progress.errorMsg + s"Connector '$connectorActorName' is terminated")
     }
 
-    val future = ask(connector, TaskExecutionRequest(taskExecutionConfig))(5 seconds).mapTo[TaskExecutionResponse]
+    val future = ask(connector, TaskExecutionRequest(taskConfig))(taskConfig.executionTimeout seconds)
+      .mapTo[TaskExecutionResponse]
     future pipeTo self
 
     progress

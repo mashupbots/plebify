@@ -40,7 +40,7 @@ case class ConnectorConfig(
    * 
    * Defaults:
    *  - `description` = empty string.
-   *  - `initialization-timeout` = 3 seconds.
+   *  - `initialization-timeout` = 5 seconds.
    *
    * @param id Unique id of this connector
    * @param config Configuration
@@ -50,7 +50,7 @@ case class ConnectorConfig(
     id,
     ConfigUtil.getString(config, s"$keyPath.description", ""),
     config.getString(s"$keyPath.factory-class-name"),
-    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 3),
+    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 5),
     ConfigUtil.getParameters(config, keyPath,
       List("factory-class-name", "description", "initialization-timeout")))
 

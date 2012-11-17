@@ -41,7 +41,7 @@ case class EventSubscriptionConfig(
    *
    * Defaults:
    *  - `description` = empty string.
-   *  - `initialization-timeout` = 3 seconds.
+   *  - `initialization-timeout` = 5 seconds.
    *
    * @param id Unique identifier of this event subscription. Must be in the format 
    *   `{connector id}-{event}[-optional-text]`.
@@ -51,7 +51,7 @@ case class EventSubscriptionConfig(
   def this(id: String, config: Config, keyPath: String) = this(
     id,
     ConfigUtil.getString(config, s"$keyPath.description", ""),
-    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 3),
+    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 5),
     ConfigUtil.getParameters(config, keyPath, List("description", "initialization-timeout")))
 
   private val splitId = id.split("-")
