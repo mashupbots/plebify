@@ -39,6 +39,10 @@ case class JobConfig(
   /**
    * Read configuration from AKKA's `application.conf`
    *
+   * Defaults:
+   *  - `description` = empty string.
+   *  - `initialization-timeout` = 3 seconds.
+   *
    * @param id Unique id of this job
    * @param config Configuration
    * @param keyPath Dot delimited key path to this connector configuration
@@ -46,7 +50,7 @@ case class JobConfig(
   def this(id: String, config: Config, keyPath: String) = this(
     id,
     ConfigUtil.getString(config, s"$keyPath.description", ""),
-    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 2),
+    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 3),
     JobConfig.loadEvents(config, s"$keyPath.on"),
     JobConfig.loadTasks(config, s"$keyPath.do"))
 

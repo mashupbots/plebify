@@ -36,7 +36,11 @@ case class ConnectorConfig(
   params: Map[String, String]) extends Extension {
 
   /**
-   * Read configuration from AKKA's `application.conf`
+   * Read configuration from AKKA's `application.conf`.
+   * 
+   * Defaults:
+   *  - `description` = empty string.
+   *  - `initialization-timeout` = 3 seconds.
    *
    * @param id Unique id of this connector
    * @param config Configuration
@@ -46,7 +50,7 @@ case class ConnectorConfig(
     id,
     ConfigUtil.getString(config, s"$keyPath.description", ""),
     config.getString(s"$keyPath.factory-class-name"),
-    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 2),
+    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 3),
     ConfigUtil.getParameters(config, keyPath,
       List("factory-class-name", "description", "initialization-timeout")))
 

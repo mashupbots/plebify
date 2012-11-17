@@ -57,6 +57,7 @@ object EngineSpec {
           connectors {
             dummy1 {
               factory-class-name = "org.mashupbots.plebify.core.DummyEngineSpecConnectorFactory"
+              initialization-timeout = 1
               no-start-response = true
             }
           }
@@ -106,6 +107,7 @@ object EngineSpec {
             job1 {
               on {
                 dummy1-event {
+                  initialization-timeout = 1
 		  	    }
 		      }
               do {

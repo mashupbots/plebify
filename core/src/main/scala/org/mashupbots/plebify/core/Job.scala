@@ -62,7 +62,7 @@ trait JobData
  * the job. The job reacts to this message by instancing a [[org.mashupbots.plebify.core.JobWorker]] to asynchronously
  * execute the specified task(s).
  *
- * This master/worker pattern allows more than one event notification to be processed concurrently. The number of 
+ * This master/worker pattern allows more than one event notification to be processed concurrently. The number of
  * concurrent workers by settings in [[org.mashupbots.plebify.core.config.JobConfig]].
  *  - `workerConcurrencyMethod`
  *  - `workerCount`
@@ -174,7 +174,7 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
         log.debug(s"Job ${jobConfig.id} subscribing to ${eventConfig.id}")
         val connectorActorName = ConnectorConfig.createActorName(eventConfig.connectorId)
         val connector = context.system.actorFor(s"$connectorActorName")
-        ask(connector, EventSubscriptionRequest(eventConfig))(2 seconds).mapTo[StartResponse]
+        ask(connector, EventSubscriptionRequest(eventConfig))(eventConfig.initializationTimeout seconds).mapTo[StartResponse]
       }))
 
       // Send Future[Seq[StartResponse]] message to ourself when future finishes

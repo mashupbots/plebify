@@ -25,15 +25,23 @@ import com.typesafe.config.Config
  * 
  * @param id Unique id of this event subscription. Must be in the format `{connector id}-{event}[-optional-text]`.
  * @param description Description of this event subscription
+ * @param initializationTimeout Number of seconds the job will wait for the
+ *  [[org.mashupbots.plebify.core.EventSubscriptionResponse]] message after sending the 
+ *  [[org.mashupbots.plebify.core.EventSubscriptionRequest]].
  * @param params Parameters for this event subscription
  */
 case class EventSubscriptionConfig(
   id: String,
   description: String,
+  initializationTimeout: Int,
   params: Map[String, String]) extends Extension {
 
   /**
    * Read configuration from AKKA's `application.conf`
+   *
+   * Defaults:
+   *  - `description` = empty string.
+   *  - `initialization-timeout` = 3 seconds.
    *
    * @param id Unique identifier of this event subscription. Must be in the format 
    *   `{connector id}-{event}[-optional-text]`.
@@ -43,7 +51,8 @@ case class EventSubscriptionConfig(
   def this(id: String, config: Config, keyPath: String) = this(
     id,
     ConfigUtil.getString(config, s"$keyPath.description", ""),
-    ConfigUtil.getParameters(config, keyPath, List("description")))
+    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 3),
+    ConfigUtil.getParameters(config, keyPath, List("description", "initialization-timeout")))
 
   private val splitId = id.split("-")
   require(splitId.length >= 2, s"job id '$id' must be in the format 'connector-event'")

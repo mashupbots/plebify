@@ -50,10 +50,11 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
           jobs {
             job1 {
               description = "this is the first job"
+              initialization-timeout = 5   
               on {
                 http-request {
                   description = "on http request #1"
-                  initialization-timeout = 5
+                  initialization-timeout = 5   
                   param1 = "aaa"
 		  	    }
     
@@ -108,7 +109,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       httpConnector.id should equal("http")
       httpConnector.description should equal("")
       httpConnector.factoryClassName should equal("org.mashupbots.plebify.httpConnector")
-      httpConnector.initializationTimeout should equal(2)
+      httpConnector.initializationTimeout should equal(3)
       httpConnector.params.size should equal(2)
       httpConnector.params("param1") should equal("a")
       httpConnector.params("param2") should equal("b")
@@ -125,6 +126,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       job1Event1.connectorId should equal("http")
       job1Event1.eventName should equal("request")
       job1Event1.description should equal("on http request #1")
+      job1Event1.initializationTimeout should equal(5)
       job1Event1.params.size should equal(1)
       job1Event1.params("param1") should equal("aaa")
 
@@ -133,6 +135,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       job1Event2.connectorId should equal("http")
       job1Event2.eventName should equal("request")
       job1Event2.description should equal("")
+      job1Event2.initializationTimeout should equal(3)
       job1Event2.params.size should equal(0)
 
       val job1Task1 = job1.tasks.find(t => t.id == "file-save-1").get
@@ -153,7 +156,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       val job2 = cfg.jobs.find(e => e.id == "job2").get
       job2.id should equal("job2")
       job2.description should equal("")
-      job2.initializationTimeout should equal(2)
+      job2.initializationTimeout should equal(3)
 
     }
 
