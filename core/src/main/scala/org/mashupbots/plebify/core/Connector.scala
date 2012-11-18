@@ -61,10 +61,15 @@ trait ConnectorMessage
  * The success or failure of subscription is returned to the sender in
  * [[org.mashupbots.plebify.core.EventSubscriptionResponse]].
  *
+ * @param jobId Id of the job that is subscribing to this event
  * @param config Event subscription configuration
+ * @param job Job that is subscribing. We cannot rely on the `sender` because sending this message with a future causes
+ *   the `sender` to be a temporary actor.
  */
-case class EventSubscriptionRequest(config: EventSubscriptionConfig) extends ConnectorMessage
-  with RequestMessage
+case class EventSubscriptionRequest(
+  jobId: String,
+  config: EventSubscriptionConfig,
+  job: ActorRef) extends ConnectorMessage with RequestMessage
 
 /**
  * The result of an event subscription.
@@ -87,10 +92,15 @@ case class EventSubscriptionResponse(errorMessage: String = "", error: Option[Th
  * The success or failure of cancellation is returned to the sender in
  * [[org.mashupbots.plebify.core.EventUnsubscriptionResponse]].
  *
+ * @param jobId Id of the job that is unsubscribing from this event
  * @param config Event subscription configuration
+ * @param job Job that is subscribing. We cannot rely on the `sender` because sending this message with a future causes
+ *   the `sender` to be a temporary actor.
  */
-case class EventUnsubscriptionRequest(config: EventSubscriptionConfig) extends ConnectorMessage
-  with RequestMessage
+case class EventUnsubscriptionRequest(
+  jobId: String,
+  config: EventSubscriptionConfig,
+  job: ActorRef) extends ConnectorMessage with RequestMessage
 
 /**
  * The result of a cancellation of an event subscription.
@@ -121,9 +131,14 @@ case class EventNotification(eventSubscriptionId: String, data: Map[String, Stri
  * This message is sent form a [[org.mashupbots.plebify.core.JobWorker]] to a connector. The success or failure of
  * execution is returned to the job in [[org.mashupbots.plebify.core.TaskExecutionResponse]].
  *
+ * @param jobId Id of the job
  * @param config Task execution configuration detailing how the task is to be run
+ * @param eventNotification Message that triggered this request
  */
-case class TaskExecutionRequest(config: TaskExecutionConfig) extends ConnectorMessage with RequestMessage
+case class TaskExecutionRequest(
+  jobId: String,
+  config: TaskExecutionConfig,
+  eventNotification: EventNotification) extends ConnectorMessage with RequestMessage
 
 /**
  * The result of executing a task.

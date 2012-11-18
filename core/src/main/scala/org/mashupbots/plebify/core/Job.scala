@@ -162,7 +162,7 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
       // Subscribe and send Future[Seq[StartResponse]] message back to ourself
       subscribe()
     case Event(msg: Seq[_], data: InitializationData) =>
-      // Future successful. Check for errors in all StartResponse received
+      // Future successful. Check for errors in all EventSubscriptionResponse received
       val errors = filterErrors(msg)
       if (errors.size > 0) {
         stop(FSM.Failure(new Error(s"Error subscribing to one or more events.")))
@@ -225,8 +225,8 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
       log.info(s"Job shutdown")
   }
 
-  private def filterErrors(msg: Seq[_]): Seq[StartResponse] = {
-    val responses = msg.asInstanceOf[Seq[StartResponse]]
+  private def filterErrors(msg: Seq[_]): Seq[EventSubscriptionResponse] = {
+    val responses = msg.asInstanceOf[Seq[EventSubscriptionResponse]]
     responses.filter(r => !r.isSuccess)
   }
 
@@ -235,8 +235,9 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
       val futures = Future.sequence(jobConfig.events.map(eventConfig => {
         log.debug(s"Job ${jobConfig.id} subscribing to ${eventConfig.id}")
         val connectorActorName = ConnectorConfig.createActorName(eventConfig.connectorId)
-        val connector = context.system.actorFor(s"$connectorActorName")
-        ask(connector, EventSubscriptionRequest(eventConfig))(eventConfig.initializationTimeout seconds).mapTo[StartResponse]
+        val connector = context.actorFor(s"../$connectorActorName")
+        val msg = EventSubscriptionRequest(jobConfig.id, eventConfig, self)
+        ask(connector, msg)(eventConfig.initializationTimeout seconds).mapTo[EventSubscriptionResponse]
       }))
 
       // Send Future[Seq[StartResponse]] message to ourself when future finishes
@@ -255,7 +256,7 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
         val connectorActorName = ConnectorConfig.createActorName(eventConfig.connectorId)
         val connector = context.system.actorFor(s"$connectorActorName")
         if (!connector.isTerminated) {
-          connector ! EventSubscriptionRequest(eventConfig)
+          connector ! EventUnsubscriptionRequest(jobConfig.id, eventConfig, self)
         }
       } catch {
         case e: Throwable => log.error(s"Ignoring error while $msg. ${e.getMessage}.", e)

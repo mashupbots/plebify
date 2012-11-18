@@ -47,9 +47,9 @@ trait JobWorkerData
  * When processing of event notification message is finished, this actor self terminates.
  *
  * @param jobConfig Job configuration containing the list of tasks to execute
- * @param msg Event notification message to process
+ * @param eventNotification Event notification trigger message
  */
-class JobWorker(jobConfig: JobConfig, msg: EventNotification) extends Actor
+class JobWorker(jobConfig: JobConfig, eventNotification: EventNotification) extends Actor
   with FSM[JobWorkerState, JobWorkerData] with akka.actor.ActorLogging {
 
   import context.dispatcher
@@ -181,8 +181,8 @@ class JobWorker(jobConfig: JobConfig, msg: EventNotification) extends Actor
       throw new Error(progress.errorMsg + s"Connector '$connectorActorName' is terminated")
     }
 
-    val future = ask(connector, TaskExecutionRequest(taskConfig))(taskConfig.executionTimeout seconds)
-      .mapTo[TaskExecutionResponse]
+    val msg = TaskExecutionRequest(jobConfig.id, taskConfig, eventNotification)
+    val future = ask(connector, msg)(taskConfig.executionTimeout seconds).mapTo[TaskExecutionResponse]
     future pipeTo self
 
     progress

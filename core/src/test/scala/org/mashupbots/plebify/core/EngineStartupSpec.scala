@@ -30,7 +30,7 @@ import akka.actor.ActorRef
 import org.slf4j.LoggerFactory
 import akka.actor.ActorContext
 
-object EngineSpec {
+object EngineStartupSpec {
 
   val cfg = """
 		connector-class-not-found {
@@ -73,28 +73,7 @@ object EngineSpec {
 		      }
             }
           }
-		}
-    
-        connector-not-found {
-          connectors {
-            dummy1 {
-              factory-class-name = "org.mashupbots.plebify.core.DummyEngineSpecConnectorFactory"
-            }
-          }
-          jobs {
-            job1 {
-              on {
-                notfound-event {
-                  description = "'notfound' connector id not present as a collector"
-		  	    }
-		      }
-              do {
-                notfound-task {
-		  	    }
-		      }
-            }
-          }
-		}
+		}   
     
         job-not-subscribe {
           connectors {
@@ -111,7 +90,7 @@ object EngineSpec {
 		  	    }
 		      }
               do {
-                notfound-task {
+                dummy1-task {
 		  	    }
 		      }
             }
@@ -121,16 +100,16 @@ object EngineSpec {
 
 }
 
-class EngineSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec with MustMatchers
-  with BeforeAndAfterAll {
+class EngineStartupSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec 
+  with MustMatchers with BeforeAndAfterAll {
 
   val log = LoggerFactory.getLogger("EngineSpec")
 
-  def this() = this(ActorSystem("EngineSpec", ConfigFactory.parseString(EngineSpec.cfg)))
+  def this() = this(ActorSystem("EngineSpec", ConfigFactory.parseString(EngineStartupSpec.cfg)))
 
-  "Engine" must {
+  "Engine Startup" must {
 
-    "Fail when connector class is not found" in {
+    "fail when connector class is not found" in {
       val engine = system.actorOf(Props(new Engine(configName = "connector-class-not-found")),
         name = "connector-class-not-found")
       engine ! StartRequest()
@@ -143,7 +122,7 @@ class EngineSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
       }
     }
 
-    "Fail when connector does not response with a StartResponse" in {
+    "fail when connector does not response with a StartResponse" in {
       val engine = system.actorOf(Props(new Engine(configName = "connector-no-response")),
         name = "connector-no-response")
       engine ! StartRequest()
@@ -156,19 +135,7 @@ class EngineSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
       }
     }
 
-    "Fail when job cannot find connector" in {
-      val engine = system.actorOf(Props(new Engine(configName = "connector-not-found")), name = "connector-not-found")
-      engine ! StartRequest()
-      expectMsgPF(5 seconds) {
-        case m: StartResponse => {
-          log.debug(m.toString)
-          m.isSuccess must be(false)
-          m.error.get.getMessage.contains("Error starting one or more jobs") must be(true)
-        }
-      }
-    }
-
-    "Fail when job connector does not respond with a EventSubscriptionResponse" in {
+    "fail when job connector does not respond with a EventSubscriptionResponse" in {
       val engine = system.actorOf(Props(new Engine(configName = "job-not-subscribe")), name = "job-not-subscribe")
       engine ! StartRequest()
       expectMsgPF(5 seconds) {
@@ -197,6 +164,6 @@ class DummyEngineSpecConnector1(connectorConfig: ConnectorConfig) extends Actor 
         sender ! StartResponse()
     case x: EventSubscriptionRequest =>
       if (!connectorConfig.params.contains("no-subscription-response"))
-        sender ! StartResponse()
+        sender ! EventSubscriptionResponse()
   }
 }
