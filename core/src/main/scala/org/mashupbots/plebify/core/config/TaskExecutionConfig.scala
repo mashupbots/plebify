@@ -24,7 +24,10 @@ import com.typesafe.config.Config
  * Tasks are executed (or run) by a job when an event to which the job is subscribed fires.  This configuration details
  * how a task should be run.
  *
- * @param id Unique id of this task. Must be in the format `{connector id}-{task}[-optional-text]`.
+ * @param jobId Id of the job to which this task belong
+ * @param index Index of this event subscription in the List of event subscription for a job
+ * @param connectorId Id of the connector containing the task that we wish to execute
+ * @param connectorTask Id of the task in the connector that we wish to execute
  * @param description Description of this task
  * @param executionTimeout Number of seconds to wait for a response form the task before declaring a timeout error
  * @param onSuccess Determines the next step if this task is completed with no errors. Valid values are:
@@ -43,7 +46,10 @@ import com.typesafe.config.Config
  * @param params Parameters for this task
  */
 case class TaskExecutionConfig(
-  id: String,
+  jobId: String,
+  index: Int,
+  connectorId: String,
+  connectorTask: String,
   description: String,
   executionTimeout: Int,
   onSuccess: String,
@@ -63,42 +69,38 @@ case class TaskExecutionConfig(
    *  - max-retry-count = 3
    *  - retry-interval = 3 seconds
    *
-   * @param id Unique identifier of this task. Must be in the format `{connector id}-{task}[-optional-text]`.
-   * @param config Configuration
-   * @param keyPath Dot delimited key path to this task configuration
+   * @param jobId Id of the job to which this task belong
+   * @param index Index of this event subscription in the List of event subscription for a job
+   * @param config Raw Akka configuration
    */
-  def this(id: String, config: Config, keyPath: String) = this(
-    id,
-    ConfigUtil.getString(config, s"$keyPath.description", ""),
-    ConfigUtil.getInt(config, s"$keyPath.execution-timeout", 5),
-    ConfigUtil.getString(config, s"$keyPath.on-success", "next"),
-    ConfigUtil.getString(config, s"$keyPath.on-fail", "fail"),
-    ConfigUtil.getInt(config, s"$keyPath.max-retry-count", 3),
-    ConfigUtil.getInt(config, s"$keyPath.retry-interval", 3),
-    ConfigUtil.getParameters(config, keyPath,
-      List("description", "execution-timeout", "on-success", "on-fail", "max-retry-count", "retry-interval")))
-
-  private val splitId = id.split("-")
-  require(splitId.length >= 2, s"Task id '$id' must be in the format 'connector-task'")
-
-  /**
-   * Id of the connector that will perform the task
-   */
-  val connectorId = splitId(0)
+  def this(jobId: String, index: Int, config: Config) = this(
+    jobId,
+    index,
+    config.getString("connector-id"),
+    config.getString("connector-task"),
+    ConfigUtil.getString(config, "description", ""),
+    ConfigUtil.getInt(config, "execution-timeout", 5),
+    ConfigUtil.getString(config, "on-success", "next"),
+    ConfigUtil.getString(config, "on-fail", "fail"),
+    ConfigUtil.getInt(config, "max-retry-count", 3),
+    ConfigUtil.getInt(config, "retry-interval", 3),
+    ConfigUtil.getParameters(config,
+      List("connector-id", "connector-task", "description", "execution-timeout",
+        "on-success", "on-fail", "max-retry-count", "retry-interval")))
 
   /**
-   * Name of the connector task that is to be performed
+   * Descriptive name of event subscription that can be used in messages
    */
-  val taskName = splitId(1)
+  val name = s"job '$jobId' task #${index + 1}"
 
   /**
    * Validate this configuration
    */
   def validate() {
-    require(!id.isEmpty, "Job Id must contain a value")
-    require(!onSuccess.isEmpty, s"'on-success' not specified for task $id")
-    require(!onFail.isEmpty, s"'on-fail' not specified for task $id")
-    require(maxRetryCount > 0, s"'initialization-timeout' for job $id must be greater than 0")
-    require(retryInterval > 0, s"'max-worker-count' for job $id must be greater than 0")
+    require(index >= 0, s"Task execution index in job $jobId must be 0 or greater")
+    require(!onSuccess.isEmpty, s"'on-success' not specified in $name")
+    require(!onFail.isEmpty, s"'on-fail' not specified in $name")
+    require(maxRetryCount > 0, s"'initialization-timeout' in $name must be greater than 0")
+    require(retryInterval > 0, s"'max-worker-count' in $name must be greater than 0")
   }
 }

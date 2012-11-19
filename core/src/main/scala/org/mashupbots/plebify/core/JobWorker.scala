@@ -99,8 +99,8 @@ class JobWorker(jobConfig: JobConfig, eventNotification: EventNotification) exte
     /**
      * Generic error message to identify this task
      */
-    val errorMsg = s"Error executing task '${currentTask.taskName}' in connector '${currentTask.connectorId}' " +
-      s"for job '${jobConfig.id}'. "
+    val errorMsg = s"Error executing '${currentTask.connectorId}-${currentTask.connectorTask}' for " +
+    		s"'${currentTask.name}'."
 
     /**
      * Returns a new Progress object pointing to the next task and restarts the retry count
@@ -113,7 +113,7 @@ class JobWorker(jobConfig: JobConfig, eventNotification: EventNotification) exte
      * Returns a new Progress object pointing to the specified task id and restarts the retry count
      */
     def gotoTask(taskId: String): Progress = {
-      val newIdx = jobConfig.tasks.indexWhere(t => t.id == taskId)
+      val newIdx = taskId.toInt - 1
       if (newIdx == -1) throw new Error(s"Task id '${taskId}' not found")
       this.copy(idx = newIdx, retryCount = 0)
     }
@@ -196,7 +196,7 @@ class JobWorker(jobConfig: JobConfig, eventNotification: EventNotification) exte
    */
   private def processResult(progress: Progress, error: Option[Throwable]): State = {
     if (error.isDefined && progress.retryCount < progress.currentTask.maxRetryCount) {
-      log.error(error.get, "Retrying task {} because of error {}", progress.currentTask.id, error.get.getMessage)
+      log.error(error.get, "Retrying {} because of error: {}", progress.currentTask.name, error.get.getMessage)
       context.system.scheduler.scheduleOnce(jobConfig.rescheduleInterval seconds, self, Retry())
       stay using progress.retryTask()
     } else {

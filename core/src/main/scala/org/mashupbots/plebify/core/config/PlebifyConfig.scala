@@ -25,50 +25,48 @@ import scala.collection.JavaConversions._
  * {{{
  *
  * plebify {
- *   connectors {
- *     file {
+ *   connectors [
+ *     {
+ *       id = "file"
  *       description = ""
  *       factory-class-name = ""
  *       initialization-timeout = 5
  *       param1 = ""
  *     }
- *
- *     http {
+ *     {
+ *       id = "http"
  *       description = ""
  *       factory-class-name = ""
  *       param1 = ""
  *       param2 = ""
- *     }
- *   }
+ *     }]
  *
- *   jobs {
- *     job1 {
+ *   jobs [
+ *     {
+ *       id = "job1"
  *       description = ""
- *
- *       on {
- *         http-request {
- *           endpoint = "endpoint1"
+ *       on [
+ *         {
+ *           connector-id = "http"
+ *           connector-event = "request"
+ *         }]
+ *       do [
+ *         {
+ *           connector-id = "file"
+ *           connector-task = "save"
  *         }
- *       }
- *
- *       do {
- *         file-save-1 {
- *           endpoint = "endpoint1"
- *         }
- *
- *         file-save-2 {
- *           endpoint = "endpoint2"
- *         }
- *       }
- *     }
- *   }
+ *         {
+ *           connector-id = "file"
+ *           connector-task = "save"
+ *         }]
+ *     }]
  * }
  *
  * }}}
  */
 case class PlebifyConfig(
-  connectors: Seq[ConnectorConfig],
-  jobs: Seq[JobConfig]) extends Extension {
+  connectors: List[ConnectorConfig],
+  jobs: List[JobConfig]) extends Extension {
 
   /**
    * Read configuration from AKKA's `application.conf`
@@ -94,12 +92,12 @@ case class PlebifyConfig(
     jobs.foreach(j => {
       j.events.foreach(e => {
         if (!connectors.exists(c => c.id == e.connectorId))
-          throw new Error(s"Connector id '${e.connectorId}' in event '${e.id}' of job '${j.id}' does not exist.")
+          throw new Error(s"Connector id '${e.connectorId}' in ${e.name} does not exist.")
       })
 
       j.tasks.foreach(t => {
         if (!connectors.exists(c => c.id == t.connectorId))
-          throw new Error(s"Connector id '${t.connectorId}' in task '${t.id}' of job '${j.id}' does not exist.")
+          throw new Error(s"Connector id '${t.connectorId}' in ${t.name} does not exist.")
       })
     })
   }
@@ -112,29 +110,27 @@ object PlebifyConfig {
   /**
    * Load connectors from the configuration file
    *
-   * Note that connector id forms the key. This implicitly means that a connector id must be unique
-   *
    * @param config Configuration
    * @param keyPath Dot delimited key path to the connectors configuration
+   * @returns List of [[org.mashupbots.plebify.core.config.ConnectorConfig]]
    */
-  def loadConnectors(config: Config, keyPath: String): Seq[ConnectorConfig] = {
-    val connectors = config.getObject(keyPath)
-    (for (id <- connectors.keySet())
-      yield new ConnectorConfig(id, config, s"$keyPath.$id")).toSeq
+  def loadConnectors(config: Config, keyPath: String): List[ConnectorConfig] = {
+    val connectors = config.getObjectList(keyPath)
+    (for (c <- connectors)
+      yield new ConnectorConfig(c.toConfig())).toList
   }
 
   /**
    * Load jobs from the configuration file
    *
-   * Note that job id forms the key. This implicitly means that a job id must be unique
-   *
    * @param config Configuration
    * @param keyPath Dot delimited key path to the jobs configuration
+   * @returns List of [[org.mashupbots.plebify.core.config.JobConfig]]
    */
-  def loadJobs(config: Config, keyPath: String): Seq[JobConfig] = {
-    val jobs = config.getObject(keyPath)
-    (for (id <- jobs.keySet())
-      yield new JobConfig(id, config, s"$keyPath.$id")).toSeq
+  def loadJobs(config: Config, keyPath: String): List[JobConfig] = {
+    val jobs = config.getObjectList(keyPath)
+    (for (j <- jobs)
+      yield new JobConfig(j.toConfig())).toList
   }
 
 }

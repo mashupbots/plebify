@@ -233,7 +233,7 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
   private def subscribe(): State = {
     try {
       val futures = Future.sequence(jobConfig.events.map(eventConfig => {
-        log.debug(s"Job ${jobConfig.id} subscribing to ${eventConfig.id}")
+        log.debug(s"Subscribing to ${eventConfig.connectorId}-${eventConfig.connectorEvent} for ${eventConfig.name}")
         val connectorActorName = ConnectorConfig.createActorName(eventConfig.connectorId)
         val connector = context.actorFor(s"../$connectorActorName")
         val msg = EventSubscriptionRequest(jobConfig.id, eventConfig, self)
@@ -250,7 +250,7 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
 
   private def unsubscribe() {
     jobConfig.events.foreach(eventConfig => {
-      val msg = s"Job ${jobConfig.id} unsubscribing from ${eventConfig.id}"
+      val msg = s"Unsubscribing to ${eventConfig.connectorId}-${eventConfig.connectorEvent} for ${eventConfig.name}"
       log.debug(msg)
       try {
         val connectorActorName = ConnectorConfig.createActorName(eventConfig.connectorId)

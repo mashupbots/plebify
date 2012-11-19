@@ -119,10 +119,10 @@ case class EventUnsubscriptionResponse(errorMessage: String = "", error: Option[
  *
  * This message is sent from a connector to a job that has subscribed to the event on the connector.
  *
- * @param eventSubscriptionId Identifier of the event
+ * @param config Configuration of this event subscription
  * @param data Data associated with the event
  */
-case class EventNotification(eventSubscriptionId: String, data: Map[String, String]) extends ConnectorMessage
+case class EventNotification(config: EventSubscriptionConfig, data: Map[String, String]) extends ConnectorMessage
   with NotificationMessage
 
 /**

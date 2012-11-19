@@ -32,72 +32,52 @@ import akka.actor.ActorContext
 
 object EngineStartupSpec {
 
-  val cfg = """
-		connector-class-not-found {
-          connectors {
-            notfound {
-              factory-class-name = "org.mashupbots.plebify.fileConnector"
-            }
-          }
-          jobs {
-            job1 {
-              on {
-                notfound-event {
-		  	    }
-		      }
-              do {
-                notfound-task {
-		  	    }
-		      }
-            }
-          }
-		}
+  val connectorClassNotFound = """
+	connector-class-not-found {
+      connectors = [{
+          connector-id = "notfound"
+          factory-class-name = "org.mashupbots.plebify.fileConnector"
+      }]
+      jobs = [{
+          job-id = "job1"
+          on = [{ connector-id = "notfound", connector-event = "event" }]
+          do = [{ connector-id = "notfound", connector-task = "task" }]
+      }]
+	}
+    """
     
-		connector-no-response {
-          connectors {
-            dummy1 {
-              factory-class-name = "org.mashupbots.plebify.core.DummyEngineSpecConnectorFactory"
-              initialization-timeout = 1
-              no-start-response = true
-            }
-          }
-          jobs {
-            job1 {
-              on {
-                dummy1-event {
-		  	    }
-		      }
-              do {
-                dummy1-task {
-		  	    }
-		      }
-            }
-          }
-		}   
-    
-        job-not-subscribe {
-          connectors {
-            dummy1 {
-              factory-class-name = "org.mashupbots.plebify.core.DummyEngineSpecConnectorFactory"
-              no-subscription-response = true
-            }
-          }
-          jobs {
-            job1 {
-              on {
-                dummy1-event {
-                  initialization-timeout = 1
-		  	    }
-		      }
-              do {
-                dummy1-task {
-		  	    }
-		      }
-            }
-          }
-		}    
+  val connectorNoResponse = """
+	connector-no-response {
+      connectors = [{
+          connector-id = "dummy1"
+          factory-class-name = "org.mashupbots.plebify.core.DummyEngineSpecConnectorFactory"
+          initialization-timeout = 1
+          no-start-response = true
+      }]
+      jobs = [{
+          job-id = "job1"
+          on = [{ connector-id = "dummy1", connector-event = "event" }]
+          do = [{ connector-id = "dummy1", connector-task = "task" }]
+      }]
+	}
     """
 
+  val jobNotSubscribe = """
+	job-not-subscribe {
+      connectors = [{
+          connector-id = "dummy1"
+          factory-class-name = "org.mashupbots.plebify.core.DummyEngineSpecConnectorFactory"
+          no-subscription-response = true
+      }]
+      jobs = [{
+          job-id = "job1"
+          on = [{ connector-id = "dummy1", connector-event = "event", initialization-timeout = 1 }]
+          do = [{ connector-id = "dummy1", connector-task = "task" }]
+      }]
+	}
+    """
+    
+    val cfg = List(connectorClassNotFound, connectorNoResponse, jobNotSubscribe).mkString("\n")
 }
 
 class EngineStartupSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec 

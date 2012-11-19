@@ -19,19 +19,25 @@ import akka.actor.Extension
 import com.typesafe.config.Config
 
 /**
- * Event subscription configuration for a job. 
- * 
+ * Event subscription configuration for a job.
+ *
  * Details the condition that a notification will be sent to the specified job when this event fires.
- * 
- * @param id Unique id of this event subscription. Must be in the format `{connector id}-{event}[-optional-text]`.
+ *
+ * @param jobId Id of the job to which this event subscription belong
+ * @param index Index of this event subscription in the List of event subscription for a job
+ * @param connectorId Id of the connector containing the event to which we wish to subscribe
+ * @param connectorEvent Id of the event in the connector to which we wish to subscribe
  * @param description Description of this event subscription
  * @param initializationTimeout Number of seconds the job will wait for the
- *  [[org.mashupbots.plebify.core.EventSubscriptionResponse]] message after sending the 
+ *  [[org.mashupbots.plebify.core.EventSubscriptionResponse]] message after sending the
  *  [[org.mashupbots.plebify.core.EventSubscriptionRequest]].
  * @param params Parameters for this event subscription
  */
 case class EventSubscriptionConfig(
-  id: String,
+  jobId: String,
+  index: Int,
+  connectorId: String,
+  connectorEvent: String,
   description: String,
   initializationTimeout: Int,
   params: Map[String, String]) extends Extension {
@@ -43,35 +49,31 @@ case class EventSubscriptionConfig(
    *  - `description` = empty string.
    *  - `initialization-timeout` = 5 seconds.
    *
-   * @param id Unique identifier of this event subscription. Must be in the format 
-   *   `{connector id}-{event}[-optional-text]`.
+   * @param jobId Id of the job to which this task belong
+   * @param index Index of this event subscription in the List of event subscription for a job
    * @param config Raw akka configuration
-   * @param keyPath Dot delimited key path to this trigger configuration
    */
-  def this(id: String, config: Config, keyPath: String) = this(
-    id,
-    ConfigUtil.getString(config, s"$keyPath.description", ""),
-    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 5),
-    ConfigUtil.getParameters(config, keyPath, List("description", "initialization-timeout")))
-
-  private val splitId = id.split("-")
-  require(splitId.length >= 2, s"Event '$id' must be in the format 'connector-event'")
-
-  /**
-   * Id of the connector to listen to
-   */
-  val connectorId = splitId(0)
+  def this(jobId: String, index: Int, config: Config) = this(
+    jobId,
+    index,
+    config.getString("connector-id"),
+    config.getString("connector-event"),
+    ConfigUtil.getString(config, "description", ""),
+    ConfigUtil.getInt(config, "initialization-timeout", 5),
+    ConfigUtil.getParameters(config, List("connector-id", "connector-event", "description", "initialization-timeout")))
 
   /**
-   * Name of the connector event to which to subscribe 
+   * Descriptive name of event subscription that can be used in messages
    */
-  val eventName = splitId(1)
-  
+  val name = s"job '$jobId' event #${index + 1}"
+
   /**
    * Validate this configuration
    */
   def validate() {
-    require(!id.isEmpty, "Event Id must contain a value")
-    require(initializationTimeout > 0, s"'initialization-timeout' for job $id must be greater than 0")
-  }    
+    require(index >= 0, s"Event subscription index in job '$jobId' must be 0 or greater ")
+    require(!connectorId.isEmpty, s"'connector-id' in $name must contain a value")
+    require(!connectorEvent.isEmpty, s"'connector-event' in $name must contain a value")
+    require(initializationTimeout > 0, s"'initialization-timeout' in $name must be greater than 0")
+  }
 }

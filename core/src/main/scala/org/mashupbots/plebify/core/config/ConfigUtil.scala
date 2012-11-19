@@ -28,8 +28,8 @@ object ConfigUtil {
 
   /**
    * Load all child string items of the specified `keyPath` object into map
-   * 
-   * The following 
+   *
+   * The following
    * {{{
    *  node {
    *    param1 = "1"
@@ -38,25 +38,22 @@ object ConfigUtil {
    *  }
    * }}}
    *
-   * will be turned into 
+   * will be turned into
    * {{{
    *  Map( ["param1", "1"], ["param1", "2"], ["param1", "3"])
    * }}}
-   * 
+   *
    * @param config Configuration
    * @param keyPath Dot delimited key path to this connector configuration
    * @param keysToIgnore Name of keys under `keyPath` to NOT load
    */
-  def getParameters(config: Config, keyPath: String, keysToIgnore: List[String]): Map[String, String] = {    
-    val obj = config.getObject(keyPath) 
-    val params = for { 
-       key <- obj.keys 
-       if !keysToIgnore.contains(key)
-    } yield (key, config.getString(s"$keyPath.$key"))        
-    
-    params.toMap
+  def getParameters(config: Config, keysToIgnore: List[String]): Map[String, String] = {
+   config.entrySet()
+    	.filter(e => !keysToIgnore.contains(e.getKey()))
+    	.map(e => (e.getKey(), config.getString(e.getKey())))
+        .toMap
   }
-  
+
   /**
    * Returns the specified setting as an string. If setting not specified, then the default is returned.
    */

@@ -29,198 +29,152 @@ import akka.actor.ExtensionIdProvider
 
 class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfterAll {
 
-  val actorConfig = """
+  val test1Config = """
 	test1 {
-      connectors {
-        file {
+      connectors = [{
+          connector-id = "file"
           description = "file system"
           factory-class-name = "org.mashupbots.plebify.fileConnector"
           initialization-timeout = 6
           param1 = "a"
-        }
-
-        http {
+        },{
+          connector-id = "http"
           factory-class-name = "org.mashupbots.plebify.httpConnector"
           param1 = "a"
           param2 = "b"
-        }
-      }
-
-      jobs {
-        job1 {
+        }]
+      jobs = [{
+          job-id = "job1"
           description = "this is the first job"
           initialization-timeout = 6
           max-worker-count = 10
           max-worker-strategy = "reschedule"
           queue-size = 200
           reschedule-interval = 300
-          on {
-            http-request {
+          on = [{
+              connector-id = "http"
+              connector-event = "request"
               description = "on http request #1"
               initialization-timeout = 6
               param1 = "aaa"
-	  	    }
-
-            http-request-2 {
-	  	    }
-	      }
-          do {
-            file-save-1 {
+	  	    },{
+              connector-id = "file"
+              connector-event = "exists"
+	  	    }]
+          do = [{
+              connector-id = "file"
+              connector-task = "save"
               description = "save to folder 1"
               execution-timeout = 1
               on-success = "success"
-              on-fail = "file-save-2"
+              on-fail = "2"
               max-retry-count = 100
               retry-interval = 101
               param1 = "111"
-	  	    }
-
-            file-save-2 {
-	  	    }
-	      }
-        }
-
-        job2 {
-          on {
-            file-exists {
+	  	    },{
+              connector-id = "file"
+              connector-task = "delete"
+	  	    }]
+        },{
+          job-id = "job2"
+          on = [{
+              connector-id = "file"
+              connector-event = "exists"
               description = "when file is created"
               param1 = "aaa"
-	  	    }
-	      }
-          do {
-            file-save-1 {
+	        }]
+          do = [{
+              connector-id = "file"
+              connector-task = "save"
               param1 = "111"
-	  	    }
-	      }
-        }
-      }
-	}
-
-    no-connectors {
-      connectors {}
-      jobs {}
+	  	    }]
+        }]
     }
-
-    no-jobs {
-      connectors {
-        file {
-          factory-class-name = "org.mashupbots.plebify.fileConnector"
-        }
-      }          
-      jobs {}
-    }
-
-    job-event-connector-not-exist {
-      connectors {
-        file {
-          factory-class-name = "org.mashupbots.plebify.fileConnector"
-        }
-      }          
-      jobs {
-        job1 {
-          on {
-            badconnectorid-event {}
-	      }
-          do {
-            file-task {}
-	      }
-        }
-      }
-    }
-
-    job-task-connector-not-exist {
-      connectors {
-        file {
-          factory-class-name = "org.mashupbots.plebify.fileConnector"
-        }
-      }          
-      jobs {
-        job1 {
-          on {
-            file-event {}
-	      }
-          do {
-            badconnectorid-task {}
-	      }
-        }
-      }
-    }    
-
-    job-no-events {
-      connectors {
-        file {
-          factory-class-name = "org.mashupbots.plebify.fileConnector"
-        }
-      }          
-      jobs {
-        job1 {
-          on {
-	      }
-          do {
-            file-task {}
-	      }
-        }
-      }
-    }
-
-    job-no-tasks {
-      connectors {
-        file {
-          factory-class-name = "org.mashupbots.plebify.fileConnector"
-        }
-      }          
-      jobs {
-        job1 {
-          on {
-            file-event {}
-	      }
-          do {
-	      }
-        }
-      }
-    }
-    
-    job-unrecognised-task-on-success {
-      connectors {
-        file {
-          factory-class-name = "org.mashupbots.plebify.fileConnector"
-        }
-      }          
-      jobs {
-        job1 {
-          on {
-            file-event {}
-	      }
-          do {
-            file-task {
-              on-success = "id-not-exist"
-            }
-	      }
-        }
-      }
-    }
-    
-    job-unrecognised-task-on-fail {
-      connectors {
-        file {
-          factory-class-name = "org.mashupbots.plebify.fileConnector"
-        }
-      }          
-      jobs {
-        job1 {
-          on {
-            file-event {}
-	      }
-          do {
-            file-task {
-              on-fail = "id-not-exist"
-            }
-	      }
-        }
-      }
-    }
-    
     """
+
+  val noConnectorsConfig = """
+    no-connectors {
+      connectors = []
+      jobs = []
+    }
+    """
+
+  val noJobsConfig = """
+    no-jobs {
+      connectors = [{ connector-id="file", factory-class-name = "org.mashupbots.plebify.fileConnector" }]
+      jobs = []
+    }
+    """
+
+  val jobEventConnectorNotExistConfig = """
+    job-event-connector-not-exist {
+      connectors = [{ connector-id="file", factory-class-name = "org.mashupbots.plebify.fileConnector" }]
+      jobs = [{
+          job-id = "job1"
+          on = [{ connector-id = "badconnectorid", connector-event = "event" }]
+          do = [{ connector-id = "file", connector-task = "task" }]
+        }]
+    }
+    """
+
+  val jobTaskConnectgorNotExistConfig = """
+    job-task-connector-not-exist {
+      connectors = [{ connector-id="file", factory-class-name = "org.mashupbots.plebify.fileConnector" }]
+      jobs = [{
+          job-id = "job1"
+          on = [{ connector-id = "file", connector-event = "event" }]
+          do = [{ connector-id = "badconnectorid", connector-task = "task" }]
+        }]
+    }
+    """
+
+  val jobNoEventsConfig = """
+    job-no-events {
+      connectors = [{ connector-id="file", factory-class-name = "org.mashupbots.plebify.fileConnector" }]
+      jobs = [{
+          job-id = "job1"
+          on = []
+          do = [{ connector-id = "file", connector-task = "task" }]
+        }]
+    }
+    """
+
+  val jobNoTasksConfig = """
+    job-no-tasks {
+      connectors = [{ connector-id="file", factory-class-name = "org.mashupbots.plebify.fileConnector" }]
+      jobs = [{
+          job-id = "job1"
+          on = [{ connector-id = "file", connector-event = "event" }]
+          do = []
+        }]
+    }
+    """
+
+  val jobUnrecognisedTaskOnSuccessConfig = """
+    job-unrecognised-task-on-success {
+      connectors = [{ connector-id="file", factory-class-name = "org.mashupbots.plebify.fileConnector" }]
+      jobs = [{
+          job-id = "job1"
+          on = [{ connector-id = "file", connector-event = "event" }]
+          do = [{ connector-id = "file", connector-task = "task", on-success = "100" }]
+        }]
+    }
+    """
+
+  val jobUnrecognisedTaskOnFailConfig = """
+    job-unrecognised-task-on-fail {
+      connectors = [{ connector-id="file", factory-class-name = "org.mashupbots.plebify.fileConnector" }]
+      jobs = [{
+          job-id = "job1"
+          on = [{ connector-id = "file", connector-event = "event" }]
+          do = [{ connector-id = "file", connector-task = "task", on-fail = "100" }]
+        }]
+    }
+    """
+
+  val actorConfig = List(test1Config, noConnectorsConfig, noJobsConfig, jobEventConnectorNotExistConfig,
+    jobTaskConnectgorNotExistConfig, jobNoEventsConfig, jobNoTasksConfig,
+    jobUnrecognisedTaskOnSuccessConfig, jobUnrecognisedTaskOnFailConfig).mkString("\n")
 
   val actorSystem = ActorSystem("PlebifyConfigSpec", ConfigFactory.parseString(actorConfig))
 
@@ -231,7 +185,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       cfg.connectors.size should equal(2)
       cfg.jobs.size should equal(2)
 
-      val fileConnector = cfg.connectors.find(e => e.id == "file").get
+      val fileConnector = cfg.connectors(0)
       fileConnector.id should equal("file")
       fileConnector.factoryClassName should equal("org.mashupbots.plebify.fileConnector")
       fileConnector.description should equal("file system")
@@ -239,7 +193,7 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       fileConnector.params.size should equal(1)
       fileConnector.params("param1") should equal("a")
 
-      val httpConnector = cfg.connectors.find(e => e.id == "http").get
+      val httpConnector = cfg.connectors(1)
       httpConnector.id should equal("http")
       httpConnector.description should equal("")
       httpConnector.factoryClassName should equal("org.mashupbots.plebify.httpConnector")
@@ -248,67 +202,71 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       httpConnector.params("param1") should equal("a")
       httpConnector.params("param2") should equal("b")
 
-      val job1 = cfg.jobs.find(e => e.id == "job1").get
+      val job1 = cfg.jobs(0)
       job1.id should equal("job1")
       job1.description should equal("this is the first job")
       job1.initializationTimeout should equal(6)
-      job1.maxWorkerCount should be (10)
-      job1.maxWorkerStrategy should be (MaxWorkerStrategy.Reschedule)
-      job1.queueSize should be (200)
-      job1.rescheduleInterval should be (300)
+      job1.maxWorkerCount should be(10)
+      job1.maxWorkerStrategy should be(MaxWorkerStrategy.Reschedule)
+      job1.queueSize should be(200)
+      job1.rescheduleInterval should be(300)
       job1.events.size should equal(2)
       job1.tasks.size should equal(2)
 
-      val job1Event1 = job1.events.find(e => e.id == "http-request").get
-      job1Event1.id should equal("http-request")
+      val job1Event1 = job1.events(0)
+      job1Event1.jobId should be("job1")
+      job1Event1.index should be(0)
       job1Event1.connectorId should equal("http")
-      job1Event1.eventName should equal("request")
+      job1Event1.connectorEvent should equal("request")
       job1Event1.description should equal("on http request #1")
       job1Event1.initializationTimeout should equal(6)
       job1Event1.params.size should equal(1)
       job1Event1.params("param1") should equal("aaa")
 
-      val job1Event2 = job1.events.find(e => e.id == "http-request-2").get
-      job1Event2.id should equal("http-request-2")
-      job1Event2.connectorId should equal("http")
-      job1Event2.eventName should equal("request")
+      val job1Event2 = job1.events(1)
+      job1Event2.jobId should be("job1")
+      job1Event2.index should be(1)
+      job1Event2.connectorId should equal("file")
+      job1Event2.connectorEvent should equal("exists")
       job1Event2.description should equal("")
       job1Event2.initializationTimeout should equal(5)
       job1Event2.params.size should equal(0)
 
-      val job1Task1 = job1.tasks.find(t => t.id == "file-save-1").get
-      job1Task1.id should equal("file-save-1")
+      val job1Task1 = job1.tasks(0)
+      job1Task1.jobId should be("job1")
+      job1Task1.index should be(0)
       job1Task1.connectorId should equal("file")
-      job1Task1.taskName should equal("save")
+      job1Task1.connectorTask should equal("save")
       job1Task1.description should equal("save to folder 1")
-      job1Task1.executionTimeout should be (1)
-      job1Task1.onSuccess should be ("success")
-      job1Task1.onFail should be ("file-save-2")
-      job1Task1.maxRetryCount should be (100)
-      job1Task1.retryInterval should be (101)
+      job1Task1.executionTimeout should be(1)
+      job1Task1.onSuccess should be("success")
+      job1Task1.onFail should be("2")
+      job1Task1.maxRetryCount should be(100)
+      job1Task1.retryInterval should be(101)
       job1Task1.params.size should equal(1)
       job1Task1.params("param1") should equal("111")
 
-      val job1Task2 = job1.tasks.find(t => t.id == "file-save-2").get
-      job1Task2.id should equal("file-save-2")
+      val job1Task2 = job1.tasks(1)
+      job1Task2.jobId should be("job1")
+      job1Task2.index should be(1)
       job1Task2.connectorId should equal("file")
-      job1Task2.taskName should equal("save")
+      job1Task2.connectorTask should equal("delete")
       job1Task2.description should equal("")
-      job1Task2.executionTimeout should be (5)
-      job1Task2.onSuccess should be ("next")
-      job1Task2.onFail should be ("fail")
-      job1Task2.maxRetryCount should be (3)
-      job1Task2.retryInterval should be (3)
+      job1Task2.executionTimeout should be(5)
+      job1Task2.onSuccess should be("next")
+      job1Task2.onFail should be("fail")
+      job1Task2.maxRetryCount should be(3)
+      job1Task2.retryInterval should be(3)
       job1Task2.params.size should equal(0)
 
-      val job2 = cfg.jobs.find(e => e.id == "job2").get
+      val job2 = cfg.jobs(1)
       job2.id should equal("job2")
       job2.description should equal("")
       job2.initializationTimeout should equal(5)
-      job2.maxWorkerCount should be (5)
-      job2.maxWorkerStrategy should be (MaxWorkerStrategy.Queue)
-      job2.queueSize should be (100)
-      job2.rescheduleInterval should be (5)
+      job2.maxWorkerCount should be(5)
+      job2.maxWorkerStrategy should be(MaxWorkerStrategy.Queue)
+      job2.queueSize should be(100)
+      job2.rescheduleInterval should be(5)
     }
 
     "error when there are no connectors defined" in {
@@ -329,14 +287,14 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       val ex = intercept[Error] {
         new PlebifyConfig(actorSystem.settings.config, "job-event-connector-not-exist")
       }
-      ex.getMessage should be("Connector id 'badconnectorid' in event 'badconnectorid-event' of job 'job1' does not exist.")
+      ex.getMessage should be("Connector id 'badconnectorid' in job 'job1' event #1 does not exist.")
     }
 
     "error when there a job task connector id is not found" in {
       val ex = intercept[Error] {
         new PlebifyConfig(actorSystem.settings.config, "job-task-connector-not-exist")
       }
-      ex.getMessage should be("Connector id 'badconnectorid' in task 'badconnectorid-task' of job 'job1' does not exist.")
+      ex.getMessage should be("Connector id 'badconnectorid' in job 'job1' task #1 does not exist.")
     }
 
     "error when a job has no events defined" in {
@@ -352,19 +310,19 @@ class PlebifyConfigSpec extends WordSpec with ShouldMatchers with GivenWhenThen 
       }
       ex.getMessage should include("No 'tasks' defined in job 'job1'")
     }
-    
+
     "error when a job task has a on-success setting that is not recognised" in {
       val ex = intercept[Error] {
         new PlebifyConfig(actorSystem.settings.config, "job-unrecognised-task-on-success")
       }
-      ex.getMessage should include("Unrecognised command 'id-not-exist' in task 'id-not-exist' of job 'job1'")
+      ex.getMessage should include("Unrecognised command '100' in 'on-success' of job 'job1' task #1")
     }
 
     "error when a job task has a on-fail setting that is not recognised" in {
       val ex = intercept[Error] {
         new PlebifyConfig(actorSystem.settings.config, "job-unrecognised-task-on-fail")
       }
-      ex.getMessage should include("Unrecognised command 'id-not-exist' in task 'id-not-exist' of job 'job1'")
+      ex.getMessage should include("Unrecognised command '100' in 'on-fail' of job 'job1' task #1")
     }
 
   }

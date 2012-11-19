@@ -47,8 +47,8 @@ case class JobConfig(
   maxWorkerStrategy: MaxWorkerStrategy.Value,
   queueSize: Int,
   rescheduleInterval: Int,
-  events: Seq[EventSubscriptionConfig],
-  tasks: Seq[TaskExecutionConfig]) extends Extension {
+  events: List[EventSubscriptionConfig],
+  tasks: List[TaskExecutionConfig]) extends Extension {
 
   /**
    * Read configuration from AKKA's `application.conf`
@@ -61,20 +61,18 @@ case class JobConfig(
    *  - `queue-size` = 100 messages
    *  - `reschedule-interval` = 5 seconds
    *
-   * @param id Unique id of this job
    * @param config Configuration
-   * @param keyPath Dot delimited key path to this connector configuration
    */
-  def this(id: String, config: Config, keyPath: String) = this(
-    id,
-    ConfigUtil.getString(config, s"$keyPath.description", ""),
-    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 5),
-    ConfigUtil.getInt(config, s"$keyPath.max-worker-count", 5),
-    MaxWorkerStrategy.withName(ConfigUtil.getString(config, s"$keyPath.max-worker-strategy", "queue")),
-    ConfigUtil.getInt(config, s"$keyPath.queue-size", 100),
-    ConfigUtil.getInt(config, s"$keyPath.reschedule-interval", 5),
-    JobConfig.loadEvents(config, s"$keyPath.on"),
-    JobConfig.loadTasks(config, s"$keyPath.do"))
+  def this(config: Config) = this(
+    config.getString("job-id"),
+    ConfigUtil.getString(config, "description", ""),
+    ConfigUtil.getInt(config, "initialization-timeout", 5),
+    ConfigUtil.getInt(config, "max-worker-count", 5),
+    MaxWorkerStrategy.withName(ConfigUtil.getString(config, "max-worker-strategy", "queue")),
+    ConfigUtil.getInt(config, "queue-size", 100),
+    ConfigUtil.getInt(config, "reschedule-interval", 5),
+    JobConfig.loadEvents(config, "on"),
+    JobConfig.loadTasks(config, "do"))
 
   /**
    * Name of the actor representing this job
@@ -99,19 +97,24 @@ case class JobConfig(
 
     // check onSuccess/onFail for tasks
     tasks.foreach(t => {
-      checkCommand(t.onSuccess)
-      checkCommand(t.onFail)
+      checkCommand(t, "on-success", t.onSuccess)
+      checkCommand(t, "on-fail", t.onFail)
     })
   }
 
-  private def checkCommand(command: String) {
+  private def checkCommand(t: TaskExecutionConfig, key: String, command: String) {
     command match {
       case "next" => Unit
       case "success" => Unit
       case "fail" => Unit
-      case taskId: String => {
-        if (tasks.exists(t => t.id == taskId)) Unit
-        else throw new Error(s"Unrecognised command '$command' in task '$taskId' of job '$id'")
+      case taskNumber: String => {
+        val n = try {
+          Some(taskNumber.toInt)
+        } catch {
+          case _: java.lang.NumberFormatException => None
+        }
+        if (n.isDefined && tasks.isDefinedAt(n.get - 1)) Unit
+        else throw new Error(s"Unrecognised command '$command' in '$key' of ${t.name}")
       }
     }
   }
@@ -145,29 +148,29 @@ object JobConfig {
   /**
    * Returns the events that will trigger the running of this job
    *
-   * Note that trigger id forms the key. This implicitly means that a trigger id must be unique
-   *
    * @param config Configuration
    * @param keyPath Dot delimited key path to the trigger configuration
-   * @returns sequence of event subscription configuration
+   * @returns List of [[org.mashupbots.plebify.core.config.EventSubscriptionConfig]]
    */
-  def loadEvents(config: Config, keyPath: String): Seq[EventSubscriptionConfig] = {
-    val events = config.getObject(keyPath)
-    (for (id <- events.keySet()) yield new EventSubscriptionConfig(id, config, s"$keyPath.$id")).toSeq
+  def loadEvents(config: Config, keyPath: String): List[EventSubscriptionConfig] = {
+    val jobId = config.getString("job-id")
+    val events = config.getObjectList(keyPath)
+    (for (i <- 0 to events.size - 1)
+      yield new EventSubscriptionConfig(jobId, i, events(i).toConfig())).toList
   }
 
   /**
    * Returns the tasks that will be executed when a subscribed event is fired
    *
-   * Note that action id forms the key. This implicitly means that an action id must be unique
-   *
    * @param config Configuration
    * @param keyPath Dot delimited key path to the action configuration
-   * @returns Sequence of task configuration
+   * @returns List of [[org.mashupbots.plebify.core.config.TaskExecutionConfig]]
    */
-  def loadTasks(config: Config, keyPath: String): Seq[TaskExecutionConfig] = {
-    val tasks = config.getObject(keyPath)
-    (for (id <- tasks.keySet()) yield new TaskExecutionConfig(id, config, s"$keyPath.$id")).toSeq
+  def loadTasks(config: Config, keyPath: String): List[TaskExecutionConfig] = {
+    val jobId = config.getString("job-id")
+    val tasks = config.getObjectList(keyPath)
+    (for (i <- 0 to tasks.size - 1)
+      yield new TaskExecutionConfig(jobId, i, tasks(i).toConfig())).toList
   }
 
   /**

@@ -42,23 +42,21 @@ case class ConnectorConfig(
    *  - `description` = empty string.
    *  - `initialization-timeout` = 5 seconds.
    *
-   * @param id Unique id of this connector
    * @param config Configuration
-   * @param keyPath Dot delimited key path to this connector configuration
    */
-  def this(id: String, config: Config, keyPath: String) = this(
-    id,
-    ConfigUtil.getString(config, s"$keyPath.description", ""),
-    config.getString(s"$keyPath.factory-class-name"),
-    ConfigUtil.getInt(config, s"$keyPath.initialization-timeout", 5),
-    ConfigUtil.getParameters(config, keyPath,
-      List("factory-class-name", "description", "initialization-timeout")))
+  def this(config: Config) = this(
+    config.getString("connector-id"),
+    ConfigUtil.getString(config, "description", ""),
+    config.getString("factory-class-name"),
+    ConfigUtil.getInt(config, "initialization-timeout", 5),
+    ConfigUtil.getParameters(config, 
+        List("connector-id", "factory-class-name", "description", "initialization-timeout")))
 
   /**
    * Name of the actor representing this connector
    */
   val actorName = ConnectorConfig.createActorName(id)
-
+  
   /**
    * Validate this configuration
    */
