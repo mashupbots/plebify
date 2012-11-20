@@ -83,7 +83,35 @@ object EngineProcessingSpec {
 	}
     """
 
-  val cfg = List(singleConnectorSingleTaskConfig, singleConnectorMultipleTasksConfig).mkString("\n")
+  val concurrentEvents = """
+	concurrent-events {
+      connectors = [{
+          connector-id = "conn1"
+          factory-class-name = "org.mashupbots.plebify.core.EngineProcessingSpecConnectorFactory"
+          task-execution-count = 30
+        }]
+      jobs = [{
+          job-id = "job1"
+          on = [{
+              connector-id = "conn1"
+              connector-event = "event1"
+	        }]
+          do = [{
+              connector-id = "conn1"
+              connector-task = "task1"
+	        },{
+              connector-id = "conn1"
+              connector-task = "task2"
+	        },{
+              connector-id = "conn1"
+              connector-task = "task3"
+	        }]
+        }]
+	}
+    """
+
+  val cfg = List(singleConnectorSingleTaskConfig, singleConnectorMultipleTasksConfig,
+    concurrentEvents).mkString("\n")
 }
 
 class EngineProcessingSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec
@@ -121,7 +149,7 @@ class EngineProcessingSpec(_system: ActorSystem) extends TestKit(_system) with I
       }
     }
 
-    "be able to process single connector and multiple tasks" in {
+    "be able to process single connector and multiple tasks in correct sequence" in {
       // Start
       val engine = system.actorOf(Props(new Engine(configName = "single-connector-multiple-tasks")),
         name = "single-connector-multiple-tasks")
@@ -157,6 +185,28 @@ class EngineProcessingSpec(_system: ActorSystem) extends TestKit(_system) with I
       }
     }
 
+    "be able to process concurrent events" in {
+      // Start
+      val engine = system.actorOf(Props(new Engine(configName = "concurrent-events")), name = "concurrent-events")
+      engine ! StartRequest()
+      expectMsgPF(5 seconds) {
+        case m: StartResponse => {
+          m.isSuccess must be(true)
+        }
+      }
+
+      // Trigger and wait
+      val connector = system.actorFor("akka://EngineProcessingSpec/user/concurrent-events/connector-conn1")
+      for (i <- 1 to 10) {
+        connector ! "Trigger"
+      }
+      expectMsgPF(5 seconds) {
+        case m: List[_] => {
+          m.size must be(30)
+        }
+      }
+    }
+
   }
 }
 
@@ -168,7 +218,6 @@ class EngineProcessingSpecConnectorFactory extends ConnectorFactory {
 
 /**
  * Designed for only single use per test case.
- * Do not send "Trigger" message from multiple test cases at the same time
  */
 class EngineProcessingSpecConnector(connectorConfig: ConnectorConfig) extends Actor with akka.actor.ActorLogging {
   log.info(s"EngineProcessingSpecConnector started")
