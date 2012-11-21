@@ -22,6 +22,7 @@ import akka.actor.Actor
 import akka.actor.ActorSystem
 import org.mashupbots.plebify.core.config.ConnectorConfig
 import akka.actor.ActorContext
+import org.mashupbots.plebify.core.config.EventSubscriptionConfig
 
 abstract class ConnectorFactory() {
 
@@ -48,6 +49,27 @@ abstract class ConnectorFactory() {
 }
 
 /**
+ * A connector provides events and executes tasks
+ */
+trait Connector {
+
+  /**
+   * Creates a unique actor name for a given event subscription
+   */
+  def createActorName(config: EventSubscriptionConfig): String = {
+    s"${config.connectorId}-${config.connectorEvent}-${config.jobId}-${config.index}"
+  }
+
+  /**
+   * Creates a unique actor name for a given task
+   */
+  def createActorName(config: TaskExecutionConfig): String = {
+    s"${config.connectorId}-${config.connectorTask}-${config.jobId}-${config.index}"
+  }
+
+}
+
+/**
  * Trait to identify messages sent to/from connectors
  */
 trait ConnectorMessage
@@ -61,13 +83,11 @@ trait ConnectorMessage
  * The success or failure of subscription is returned to the sender in
  * [[org.mashupbots.plebify.core.EventSubscriptionResponse]].
  *
- * @param jobId Id of the job that is subscribing to this event
  * @param config Event subscription configuration
  * @param job Job that is subscribing. We cannot rely on the `sender` because sending this message with a future causes
  *   the `sender` to be a temporary actor.
  */
 case class EventSubscriptionRequest(
-  jobId: String,
   config: EventSubscriptionConfig,
   job: ActorRef) extends ConnectorMessage with RequestMessage
 
@@ -81,7 +101,10 @@ case class EventSubscriptionRequest(
  * @param error Optional error
  */
 case class EventSubscriptionResponse(errorMessage: String = "", error: Option[Throwable] = None)
-  extends ConnectorMessage with ResponseMessage
+  extends ConnectorMessage with ResponseMessage {
+
+  def this(ex: Throwable) = this(ex.getMessage, Some(ex))
+}
 
 /**
  * Cancels a job's subscription to the specified event
@@ -92,13 +115,11 @@ case class EventSubscriptionResponse(errorMessage: String = "", error: Option[Th
  * The success or failure of cancellation is returned to the sender in
  * [[org.mashupbots.plebify.core.EventUnsubscriptionResponse]].
  *
- * @param jobId Id of the job that is unsubscribing from this event
  * @param config Event subscription configuration
  * @param job Job that is subscribing. We cannot rely on the `sender` because sending this message with a future causes
  *   the `sender` to be a temporary actor.
  */
 case class EventUnsubscriptionRequest(
-  jobId: String,
   config: EventSubscriptionConfig,
   job: ActorRef) extends ConnectorMessage with RequestMessage
 
@@ -112,7 +133,10 @@ case class EventUnsubscriptionRequest(
  * @param error Optional error
  */
 case class EventUnsubscriptionResponse(errorMessage: String = "", error: Option[Throwable] = None)
-  extends ConnectorMessage with ResponseMessage
+  extends ConnectorMessage with ResponseMessage {
+
+  def this(ex: Throwable) = this(ex.getMessage, Some(ex))
+}
 
 /**
  * Notification that an event has occurred.
@@ -136,7 +160,6 @@ case class EventNotification(config: EventSubscriptionConfig, data: Map[String, 
  * @param eventNotification Message that triggered this request
  */
 case class TaskExecutionRequest(
-  jobId: String,
   config: TaskExecutionConfig,
   eventNotification: EventNotification) extends ConnectorMessage with RequestMessage
 
@@ -150,5 +173,8 @@ case class TaskExecutionRequest(
  * @param error Optional error
  */
 case class TaskExecutionResponse(errorMessage: String = "", error: Option[Throwable] = None)
-  extends ConnectorMessage with ResponseMessage
+  extends ConnectorMessage with ResponseMessage {
+
+  def this(ex: Throwable) = this(ex.getMessage, Some(ex))
+}
 

@@ -236,7 +236,7 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
         log.debug(s"Subscribing to ${eventConfig.connectorId}-${eventConfig.connectorEvent} for ${eventConfig.name}")
         val connectorActorName = ConnectorConfig.createActorName(eventConfig.connectorId)
         val connector = context.actorFor(s"../$connectorActorName")
-        val msg = EventSubscriptionRequest(jobConfig.id, eventConfig, self)
+        val msg = EventSubscriptionRequest(eventConfig, self)
         ask(connector, msg)(eventConfig.initializationTimeout seconds).mapTo[EventSubscriptionResponse]
       }))
 
@@ -256,7 +256,7 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
         val connectorActorName = ConnectorConfig.createActorName(eventConfig.connectorId)
         val connector = context.system.actorFor(s"$connectorActorName")
         if (!connector.isTerminated) {
-          connector ! EventUnsubscriptionRequest(jobConfig.id, eventConfig, self)
+          connector ! EventUnsubscriptionRequest(eventConfig, self)
         }
       } catch {
         case e: Throwable => log.error(s"Ignoring error while $msg. ${e.getMessage}.", e)

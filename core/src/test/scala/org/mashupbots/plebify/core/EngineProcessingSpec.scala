@@ -172,7 +172,7 @@ class EngineProcessingSpec(_system: ActorSystem) extends TestKit(_system) with I
         case m: List[_] => {
           m.size must be(1)
           val req = m(0).asInstanceOf[TaskExecutionRequest]
-          req.jobId must be("job1")
+          req.config.jobId must be("job1")
           req.config.description must be("description of conn1-task1")
           req.config.connectorId must be("conn1")
           req.config.connectorTask must be("task1")
@@ -198,17 +198,17 @@ class EngineProcessingSpec(_system: ActorSystem) extends TestKit(_system) with I
         case m: List[_] => {
           m.size must be(3)
           val req1 = m(0).asInstanceOf[TaskExecutionRequest]
-          req1.jobId must be("job1")
+          req1.config.jobId must be("job1")
           req1.config.connectorId must be("conn1")
           req1.config.connectorTask must be("task1")
 
           val req2 = m(1).asInstanceOf[TaskExecutionRequest]
-          req2.jobId must be("job1")
+          req2.config.jobId must be("job1")
           req2.config.connectorId must be("conn1")
           req2.config.connectorTask must be("task2")
 
           val req3 = m(2).asInstanceOf[TaskExecutionRequest]
-          req3.jobId must be("job1")
+          req3.config.jobId must be("job1")
           req3.config.connectorId must be("conn1")
           req3.config.connectorTask must be("task3")
 
@@ -255,12 +255,12 @@ class EngineProcessingSpec(_system: ActorSystem) extends TestKit(_system) with I
         case m: List[_] => {
           m.size must be(2)
           val req1 = m(0).asInstanceOf[TaskExecutionRequest]
-          req1.jobId must be("job1")
+          req1.config.jobId must be("job1")
           req1.config.connectorId must be("conn1")
           req1.config.connectorTask must be("task1")
 
           val req2 = m(1).asInstanceOf[TaskExecutionRequest]
-          req2.jobId must be("job1")
+          req2.config.jobId must be("job1")
           req2.config.connectorId must be("conn1")
           req2.config.connectorTask must be("task3")          
         }

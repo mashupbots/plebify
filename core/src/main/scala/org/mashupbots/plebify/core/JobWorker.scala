@@ -180,7 +180,7 @@ class JobWorker(jobConfig: JobConfig, eventNotification: EventNotification) exte
       throw new Error(progress.errorMsg + s"Connector '$connectorActorName' is terminated")
     }
 
-    val msg = TaskExecutionRequest(jobConfig.id, taskConfig, eventNotification)
+    val msg = TaskExecutionRequest(taskConfig, eventNotification)
     val future = ask(connector, msg)(taskConfig.executionTimeout seconds).mapTo[TaskExecutionResponse]
     future pipeTo self
 
