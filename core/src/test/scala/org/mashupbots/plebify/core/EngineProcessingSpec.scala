@@ -110,8 +110,39 @@ object EngineProcessingSpec {
 	}
     """
 
+  val onSuccessOnFail = """
+	on-success-on-fail {
+      connectors = [{
+          connector-id = "conn1"
+          factory-class-name = "org.mashupbots.plebify.core.EngineProcessingSpecConnectorFactory"
+          task-execution-count = 2
+        }]
+      jobs = [{
+          job-id = "job1"
+          on = [{
+              connector-id = "conn1"
+              connector-event = "event1"
+	        }]
+          do = [{
+              connector-id = "conn1"
+              connector-task = "task1"
+              on-success = 3
+	        },{
+              connector-id = "conn1"
+              connector-task = "task2"
+	        },{
+              connector-id = "conn1"
+              connector-task = "task3"
+              on-success = "fail"
+	        },{
+              connector-id = "conn1"
+              connector-task = "task4"
+	        }]
+        }]
+	}
+    """    
   val cfg = List(singleConnectorSingleTaskConfig, singleConnectorMultipleTasksConfig,
-    concurrentEvents).mkString("\n")
+    concurrentEvents, onSuccessOnFail).mkString("\n")
 }
 
 class EngineProcessingSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec
@@ -203,6 +234,35 @@ class EngineProcessingSpec(_system: ActorSystem) extends TestKit(_system) with I
       expectMsgPF(5 seconds) {
         case m: List[_] => {
           m.size must be(30)
+        }
+      }
+    }
+    
+    "be able to process on-sucess and on-fail" in {
+      // Start
+      val engine = system.actorOf(Props(new Engine(configName = "on-success-on-fail")), name = "on-success-on-fail")
+      engine ! StartRequest()
+      expectMsgPF(5 seconds) {
+        case m: StartResponse => {
+          m.isSuccess must be(true)
+        }
+      }
+
+      // Trigger and wait
+      val connector = system.actorFor("akka://EngineProcessingSpec/user/on-success-on-fail/connector-conn1")
+      connector ! "Trigger"
+      expectMsgPF(5 seconds) {
+        case m: List[_] => {
+          m.size must be(2)
+          val req1 = m(0).asInstanceOf[TaskExecutionRequest]
+          req1.jobId must be("job1")
+          req1.config.connectorId must be("conn1")
+          req1.config.connectorTask must be("task1")
+
+          val req2 = m(1).asInstanceOf[TaskExecutionRequest]
+          req2.jobId must be("job1")
+          req2.config.connectorId must be("conn1")
+          req2.config.connectorTask must be("task3")          
         }
       }
     }

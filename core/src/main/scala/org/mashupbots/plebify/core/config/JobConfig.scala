@@ -104,9 +104,9 @@ case class JobConfig(
 
   private def checkCommand(t: TaskExecutionConfig, key: String, command: String) {
     command match {
-      case "next" => Unit
-      case "success" => Unit
-      case "fail" => Unit
+      case TaskExecutionCommand.Next => Unit
+      case TaskExecutionCommand.Success => Unit
+      case TaskExecutionCommand.Fail => Unit
       case taskNumber: String => {
         val n = try {
           Some(taskNumber.toInt)

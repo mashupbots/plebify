@@ -104,3 +104,23 @@ case class TaskExecutionConfig(
     require(retryInterval > 0, s"'max-worker-count' in $name must be greater than 0")
   }
 }
+
+/**
+ * Commands that can be used with onSuccess and onFail
+ */
+object TaskExecutionCommand {
+  /**
+   * Go to next task
+   */
+  val Next = "next"
+    
+  /**
+   * Terminate with success    
+   */
+  val Success = "success"
+    
+  /**
+   * Terminate with failure
+   */
+  val Fail = "fail"
+}

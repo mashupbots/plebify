@@ -17,10 +17,9 @@ package org.mashupbots.plebify.core
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-
 import org.mashupbots.plebify.core.config.ConnectorConfig
 import org.mashupbots.plebify.core.config.JobConfig
-
+import org.mashupbots.plebify.core.config.TaskExecutionCommand
 import akka.actor.Actor
 import akka.actor.FSM
 import akka.pattern.ask
@@ -100,7 +99,7 @@ class JobWorker(jobConfig: JobConfig, eventNotification: EventNotification) exte
      * Generic error message to identify this task
      */
     val errorMsg = s"Error executing '${currentTask.connectorId}-${currentTask.connectorTask}' for " +
-    		s"'${currentTask.name}'."
+      s"'${currentTask.name}'."
 
     /**
      * Returns a new Progress object pointing to the next task and restarts the retry count
@@ -202,18 +201,19 @@ class JobWorker(jobConfig: JobConfig, eventNotification: EventNotification) exte
     } else {
       val command = if (error.isEmpty) progress.currentTask.onSuccess else progress.currentTask.onFail
       command match {
-        case "next" => {
+        case TaskExecutionCommand.Next => {
           if (progress.isLast) {
             stop(FSM.Normal)
           } else {
             stay using executeCurrentTask(progress.nextTask())
           }
         }
-        case "success" => {
+        case TaskExecutionCommand.Success => {
           stop(FSM.Normal)
         }
-        case "error" => {
-          stop(FSM.Failure(error.get))
+        case TaskExecutionCommand.Fail => {
+          stop(FSM.Failure(error.getOrElse(
+            new Error(s"Job terminating due to 'fail' command in ${progress.currentTask.name}"))))
         }
         case taskId: String => {
           stay using executeCurrentTask(progress.gotoTask(taskId))
