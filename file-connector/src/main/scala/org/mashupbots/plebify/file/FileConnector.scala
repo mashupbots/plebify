@@ -32,6 +32,8 @@ import akka.camel.CamelMessage
 import akka.pattern.ask
 import akka.util.Timeout.durationToTimeout
 import akka.actor.ActorRef
+import org.mashupbots.plebify.core.StartRequest
+import org.mashupbots.plebify.core.StartResponse
 
 /**
  * Connector to the file system.
@@ -46,28 +48,37 @@ class FileConnector(connectorConfig: ConnectorConfig) extends Actor with akka.ac
 
   import context.dispatcher
 
+  log.debug("FileConnector created with {}", connectorConfig)
+
   /**
    * Message processing
    */
   def receive = {
+    case msg: StartRequest =>
+      sender ! StartResponse()
+
     case req: EventSubscriptionRequest => {
       try {
+        log.debug("{}", req)
         instanceEventActor(req)
         sender ! EventSubscriptionResponse()
       } catch {
-        case ex: Throwable => 
+        case ex: Throwable =>
           log.error(ex, "Error processing {}", req)
           sender ! new EventSubscriptionResponse(ex)
       }
     }
 
     case req: EventUnsubscriptionRequest => {
+      log.debug("{}", req)
       val actorRef = context.actorFor(createActorName(req.config))
       actorRef ! PoisonPill
     }
 
     case req: TaskExecutionRequest => {
       try {
+        log.debug("{}", req)
+
         // Create or get task actor
         val name = createActorName(req.config)
         val aa = context.actorFor(name)
@@ -80,7 +91,7 @@ class FileConnector(connectorConfig: ConnectorConfig) extends Actor with akka.ac
         val future = taskActor.ask(req)(req.config.executionTimeout seconds).mapTo[CamelMessage]
         future.onComplete {
           case Success(m: CamelMessage) => replyTo ! TaskExecutionResponse()
-          case Failure(ex: Throwable) => 
+          case Failure(ex: Throwable) =>
             log.error(ex, "Error in camel processing of {}", req)
             replyTo ! new TaskExecutionResponse(ex)
         }

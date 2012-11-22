@@ -7,46 +7,47 @@ A simple event triggered task runner.
 
 What does Plebify do?
 ---------------------
-In my IT experience, we usually give menial jobs to new graduates - more affectionaly 
-known as `Plebs <http://en.wikipedia.org/wiki/Plebs>`_.
+Most large application that we've worked on always have associated manual tasks such as:
 
-In handing over such tasks, we usually give plebs a job description along the lines of
-``when event A happens do X, Y and Z tasks``.
+  - checking log files for errors
+  - running queries and emailing out the results
+  - the dreaded data entry  
 
-We thought it would be a good idea to see if we could improve the quality of life for plebs by 
-automating these menial jobs.
+Due to resource and budget constraints, these tasks never gets automated.  Rather, they tend to
+get delegated to `Plebs <http://en.wikipedia.org/wiki/Plebs>`_.  The lower you are in the team,
+the more likely it is you will be doing these tasks.
+
+Plebify aims to be your virtual pleb.
 
 For example:
 
-1. When a new record is added to a products database table, send email notifications to product
+1. Scan a directory for the log file and email it to you if the file is missing or the file contains
+   the word "error".
+
+2. When a new record is added to a products database table, send email notifications to product
    managers and add an entry to a new products RSS feed.
 
-2. When an email arrives containing an order form, add it to the orders database table.
-
-In addition, we should also be able to filter and transform data. For example:
-
-1. Aggregate HTTP requests, body of emails and contents of files into a real time websocket
-   broadcast.
-
-2. Check log files from batch jobs on the (file system or emailed to a inbox) for errors. If
-   there are errors, email the error to the support team. Also, write the log into elastic search.
-
+3. When an email arrives containing an order form, add it to the orders database table.
 
 
 High-level Design and Architecture
 ----------------------------------
-At its core, Plebify performs system to system integration.  As such, it makes sense to use 
-`Apache Camel <http://camel.apache.org/>`_.  It is a proven product that supports many different types 
-of transports and data formats.
+At its core, Plebify is rules based a data exchange for applications.
 
-From a modelling view point, we wanted to model jobs as actors:
+The rules are defined as jobs.  Each job comprise of events and tasks.  When a job's event fires,
+its tasks are executed.
 
-- A job has clear states: started or stopped.
-- A job is triggered to execute tasks by an event message from one or more source systems
-- A job is execute tasks by sending messages to one or more destination systems that perform the tasks
-- In executing tasks, a job may need to filter and/or transform the data
+For example:
 
-We decided to implemented Plebify using Scala 2.10 and Akka 2.1 because they supported Camel and the actor 
+ - when a file is created on the file system, email it to person A and HTTP post it to a REST endpoint 
+   of elasticsearch.
+ - when a database is created, email the new record to a group email
+ - when and email is received, write it to a database record
+
+To assist with system integration, we want to use `Apache Camel <http://camel.apache.org/>`_.  
+It is a proven product that supports many different types of transports and data formats.
+
+We decided to implemented Plebify using Scala 2.10 and Akka 2.1 because they support Camel and the actor 
 model.
 
 MORE INFO TO COME....

@@ -44,6 +44,11 @@ object EngineStartupSpec {
           do = [{ connector-id = "notfound", connector-task = "task" }]
       }]
 	}
+    
+	akka {
+	  event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
+	  loglevel = "DEBUG"
+	}    
     """
     
   val connectorNoResponse = """

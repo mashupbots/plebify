@@ -134,11 +134,11 @@ object Dependencies {
   )
   
   val httpConnector = Seq(
-    Dependency.camelJetty, Dependency.logback, Dependency.scalatest
+    Dependency.camelJetty, Dependency.logback, Dependency.scalatest, Dependency.akkaTestKit
   )
 
   val fileConnector = Seq(
-    Dependency.logback, Dependency.scalatest
+    Dependency.logback, Dependency.scalatest, Dependency.akkaTestKit
   )
 
   val examples = Seq(

@@ -169,12 +169,16 @@ case class TaskExecutionRequest(
  * This message is sent from a connector to the [[org.mashupbots.plebify.core.JobWorker]] that sent the
  * [[org.mashupbots.plebify.core.TaskExecutionRequest]] message.
  *
+ * @param data Response data for incorporating into data
  * @param errorMessage Error message
  * @param error Optional error
  */
-case class TaskExecutionResponse(errorMessage: String = "", error: Option[Throwable] = None)
+case class TaskExecutionResponse(
+    data: Map[String, String] = Map.empty, 
+    errorMessage: String = "", 
+    error: Option[Throwable] = None)
   extends ConnectorMessage with ResponseMessage {
 
-  def this(ex: Throwable) = this(ex.getMessage, Some(ex))
+  def this(ex: Throwable) = this(Map.empty, ex.getMessage, Some(ex))
 }
 
