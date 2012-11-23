@@ -106,7 +106,7 @@ class FileConnectorSpec(_system: ActorSystem) extends TestKit(_system) with Impl
     FileConnectorSpec.deleteTempDir(FileConnectorSpec.ouputDir1)
   }
 
-  "File Connector processing" must {
+  "File Connector" must {
 
     "trigger events and execute tasks" in {
       // Start

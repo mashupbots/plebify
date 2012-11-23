@@ -38,10 +38,17 @@ import akka.camel.CamelMessage
  *
  * @param config Task configuration
  */
-class SendRequestTask(config: TaskExecutionConfig) extends Producer with Oneway with akka.actor.ActorLogging {
+class SendRequestTask(config: TaskExecutionConfig) extends Producer with akka.actor.ActorLogging {
 
   def endpointUri = config.params("uri")
+  
+  override def postStop() { log.info("Stopping") }
 
+  override def preStart() {
+    super.preStart()
+    log.info("Starting")
+  }  
+  
   /**
    * Transforms [[org.mashupbots.plebify.core.TaskExecutionRequest]] into a CamelMessage
    */
@@ -56,5 +63,6 @@ class SendRequestTask(config: TaskExecutionConfig) extends Producer with Oneway 
 
       CamelMessage(content, header)
     }
+    case m => log.debug("Unexpected message {}", m)
   }
 }

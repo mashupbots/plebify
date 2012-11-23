@@ -149,6 +149,7 @@ class JobWorker(jobConfig: JobConfig, eventNotification: EventNotification) exte
       processResult(progress, Some(msg.cause))
     }
     case Event(result: Retry, progress: Progress) => {
+      log.debug("Retrying {}", progress)
       stay using executeCurrentTask(progress)
     }
     case unknown =>
@@ -195,8 +196,9 @@ class JobWorker(jobConfig: JobConfig, eventNotification: EventNotification) exte
    */
   private def processResult(progress: Progress, error: Option[Throwable]): State = {
     if (error.isDefined && progress.retryCount < progress.currentTask.maxRetryCount) {
-      log.error(error.get, "Retrying {} because of error: {}", progress.currentTask.name, error.get.getMessage)
-      context.system.scheduler.scheduleOnce(jobConfig.rescheduleInterval seconds, self, Retry())
+      log.error(error.get, "Retrying {} in {} seconds because of error: {}", 
+          progress.currentTask.name, progress.currentTask.retryInterval, error.get.getMessage)
+      context.system.scheduler.scheduleOnce(progress.currentTask.retryInterval seconds, self, Retry())
       stay using progress.retryTask()
     } else {
       val command = if (error.isEmpty) progress.currentTask.onSuccess else progress.currentTask.onFail

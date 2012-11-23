@@ -32,30 +32,6 @@ import akka.camel.CamelMessage
 import akka.pattern.ask
 import akka.util.Timeout.durationToTimeout
 
-abstract class ConnectorFactory() {
-
-  /**
-   * Instances a new connector actor
-   *
-   * The [[org.mashupbots.plebify.core.Engine]] will call instance and call this factory class to create a new
-   * instance in the specified actor system.
-   *
-   * The actor must be created using the supplied `context` so it can be managed and named using
-   * `connectorConfig.actorName`.
-   *
-   * After instancing, [[org.mashupbots.plebify.core.Engine]] will send a [[org.mashupbots.plebify.core.StartRequest]]
-   * message to the actor.  [[org.mashupbots.plebify.core.StartResponse]] is expected in reply when the actor is
-   * ready to process [[org.mashupbots.plebify.core.ConnectorMessage]]s.
-   *
-   * When stopping, the [[org.mashupbots.plebify.core.Engine]] will send a [[org.mashupbots.plebify.core.StopRequest]]
-   * message. [[org.mashupbots.plebify.core.StopResponse]] is expected in reply.
-   *
-   * @param context Engine actor context
-   * @param connectorConfig configuration for this connector
-   */
-  def create(context: ActorContext, connectorConfig: ConnectorConfig): ActorRef
-}
-
 /**
  * A connector provides events and executes tasks
  */
@@ -87,9 +63,21 @@ trait DefaultConnector extends Actor with akka.actor.ActorLogging with Connector
   import context.dispatcher
 
   /**
+   * Flag to determine if we should kill the task actor upon error.  If true, a `PoisoinPill` is sent to the
+   * task actor if an error is received. It will be started again upon the next request.
+   *
+   * Defaults to `true`.
+   *
+   * We have found that an `AkkaCamelException` is thrown by Akka's Producer if there is an error.  This causes the
+   * producer actor to stop and restart. However, restarting somehow does not work properly because messages are not
+   * being sent.  This behaviour is present for camel-jetty
+   */
+  def killTaskActorOnFailure: Boolean = true
+
+  /**
    * Message processing
    */
-  def receive = {
+  final def receive = {
     case msg: StartRequest =>
       sender ! onStart(msg)
 
@@ -129,6 +117,7 @@ trait DefaultConnector extends Actor with akka.actor.ActorLogging with Connector
           case Success(m: CamelMessage) => replyTo ! TaskExecutionResponse()
           case Failure(ex: Throwable) =>
             log.error(ex, "Error in camel processing of {}", req)
+            if (killTaskActorOnFailure) taskActor ! PoisonPill
             replyTo ! new TaskExecutionResponse(ex)
         }
       } catch {
@@ -142,7 +131,7 @@ trait DefaultConnector extends Actor with akka.actor.ActorLogging with Connector
 
   /**
    * Startup processing
-   * 
+   *
    * Override this method to execute your own startup processing
    *
    * @param message to process
@@ -153,18 +142,18 @@ trait DefaultConnector extends Actor with akka.actor.ActorLogging with Connector
   }
 
   /**
-   * Instance event actor to process a subscription request
+   * Instance an event actor to process a subscription request
    *
    * @param req Request to process
-   * @returns Instanced task actor
+   * @returns New event actor
    */
   def instanceEventActor(req: EventSubscriptionRequest): ActorRef
 
   /**
-   * Instance task actor to process a task execution request
+   * Instance a task actor to process a task execution request
    *
    * @param req Request to process
-   * @returns Instanced task actor
+   * @returns New task actor
    */
   def instanceTaskActor(req: TaskExecutionRequest): ActorRef
 

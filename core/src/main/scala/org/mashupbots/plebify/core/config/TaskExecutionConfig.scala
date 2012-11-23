@@ -100,8 +100,8 @@ case class TaskExecutionConfig(
     require(index >= 0, s"Task execution index in job $jobId must be 0 or greater")
     require(!onSuccess.isEmpty, s"'on-success' not specified in $name")
     require(!onFail.isEmpty, s"'on-fail' not specified in $name")
-    require(maxRetryCount > 0, s"'initialization-timeout' in $name must be greater than 0")
-    require(retryInterval > 0, s"'max-worker-count' in $name must be greater than 0")
+    require(maxRetryCount >= 0, s"'max-retry-count' in $name must be greater than or equals to 0")
+    require(retryInterval > 0, s"'retry-interval' in $name must be greater than 0")
   }
 }
 
