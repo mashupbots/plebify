@@ -39,5 +39,12 @@ class EventDataSpec extends WordSpec with ShouldMatchers with GivenWhenThen with
       cal.getTimeInMillis() should equal (dd.getTime())      
     }
 
+    "Find MIME Types" in  {      
+      EventData.fileNameToMimeType("test.txt") should be("text/plain")
+      EventData.fileNameToMimeType("test.csv") should be("text/csv")
+      EventData.fileNameToMimeType("test.xml") should be("application/xml")
+      EventData.fileNameToMimeType("test.json") should be("application/json")
+      EventData.fileNameToMimeType("test.unknown") should be("application/octet-stream")
+    }
   }
 }

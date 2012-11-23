@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-package org.mashupbots.plebify.connectors.http
+package org.mashupbots.plebify.http
 
 import org.scalatest.WordSpec
 import org.scalatest.matchers.ShouldMatchers
@@ -45,7 +45,8 @@ class MyEndpoint1 extends Consumer {
   def endpointUri = "jetty:http://localhost:8877/example1"
   def receive = {
     case msg: CamelMessage => {
-      sender ! "Hello1: " + msg.bodyAs[String] + "\n" 
+      //sender ! "Hello1: " + msg.bodyAs[String] + "\n" 
+      sender ! CamelMessage("", Map.empty)
       println("1:" + msg)
     }
   }

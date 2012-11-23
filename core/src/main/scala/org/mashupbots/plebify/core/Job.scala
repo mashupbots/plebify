@@ -269,9 +269,6 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
 
     // Register death watch so that we will receive a Terminate message when the actor stops
     context.watch(worker)
-
-    // Send the event notification
-    worker ! msg
   }
 
   //*******************************************************************************************************************

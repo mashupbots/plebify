@@ -15,14 +15,22 @@
 //
 package org.mashupbots.plebify.core
 
-import org.mashupbots.plebify.core.config.EventSubscriptionConfig
-import akka.actor.ActorRef
-import org.mashupbots.plebify.core.config.TaskExecutionConfig
-import akka.actor.Actor
-import akka.actor.ActorSystem
+import scala.Some.apply
+import scala.concurrent.duration.DurationInt
+import scala.util.Failure
+import scala.util.Success
+
 import org.mashupbots.plebify.core.config.ConnectorConfig
-import akka.actor.ActorContext
 import org.mashupbots.plebify.core.config.EventSubscriptionConfig
+import org.mashupbots.plebify.core.config.TaskExecutionConfig
+
+import akka.actor.Actor
+import akka.actor.ActorContext
+import akka.actor.ActorRef
+import akka.actor.PoisonPill
+import akka.camel.CamelMessage
+import akka.pattern.ask
+import akka.util.Timeout.durationToTimeout
 
 abstract class ConnectorFactory() {
 
@@ -66,6 +74,99 @@ trait Connector {
   def createActorName(config: TaskExecutionConfig): String = {
     s"${config.connectorId}-${config.connectorTask}-${config.jobId}-${config.index}"
   }
+
+}
+
+/**
+ * Default connector
+ *
+ * Connector that instances child actors to process event subscription and task executions
+ */
+trait DefaultConnector extends Actor with akka.actor.ActorLogging with Connector {
+
+  import context.dispatcher
+
+  /**
+   * Message processing
+   */
+  def receive = {
+    case msg: StartRequest =>
+      sender ! onStart(msg)
+
+    case req: EventSubscriptionRequest => {
+      try {
+        log.debug("{}", req)
+        instanceEventActor(req)
+        sender ! EventSubscriptionResponse()
+      } catch {
+        case ex: Throwable =>
+          log.error(ex, "Error processing {}", req)
+          sender ! new EventSubscriptionResponse(ex)
+      }
+    }
+
+    case req: EventUnsubscriptionRequest => {
+      log.debug("{}", req)
+      val actorRef = context.actorFor(createActorName(req.config))
+      actorRef ! PoisonPill
+    }
+
+    case req: TaskExecutionRequest => {
+      try {
+        log.debug("{}", req)
+
+        // Create or get task actor
+        val name = createActorName(req.config)
+        val aa = context.actorFor(name)
+        val taskActor = if (aa.isTerminated) instanceTaskActor(req) else aa
+
+        // Extract the sender to prevent closure issues since future will be executed on a different thread  
+        val replyTo = sender
+
+        // Send request
+        val future = taskActor.ask(req)(req.config.executionTimeout seconds).mapTo[CamelMessage]
+        future.onComplete {
+          case Success(m: CamelMessage) => replyTo ! TaskExecutionResponse()
+          case Failure(ex: Throwable) =>
+            log.error(ex, "Error in camel processing of {}", req)
+            replyTo ! new TaskExecutionResponse(ex)
+        }
+      } catch {
+        case ex: Throwable =>
+          log.error(ex, "Error processing {}", req)
+          sender ! new TaskExecutionResponse(ex)
+      }
+    }
+
+  }
+
+  /**
+   * Startup processing
+   * 
+   * Override this method to execute your own startup processing
+   *
+   * @param message to process
+   * @returns Start response to return to the sender
+   */
+  def onStart(msg: StartRequest): StartResponse = {
+    StartResponse()
+  }
+
+  /**
+   * Instance event actor to process a subscription request
+   *
+   * @param req Request to process
+   * @returns Instanced task actor
+   */
+  def instanceEventActor(req: EventSubscriptionRequest): ActorRef
+
+  /**
+   * Instance task actor to process a task execution request
+   *
+   * @param req Request to process
+   * @returns Instanced task actor
+   */
+  def instanceTaskActor(req: TaskExecutionRequest): ActorRef
 
 }
 
@@ -174,9 +275,9 @@ case class TaskExecutionRequest(
  * @param error Optional error
  */
 case class TaskExecutionResponse(
-    data: Map[String, String] = Map.empty, 
-    errorMessage: String = "", 
-    error: Option[Throwable] = None)
+  data: Map[String, String] = Map.empty,
+  errorMessage: String = "",
+  error: Option[Throwable] = None)
   extends ConnectorMessage with ResponseMessage {
 
   def this(ex: Throwable) = this(Map.empty, ex.getMessage, Some(ex))

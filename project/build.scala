@@ -134,7 +134,8 @@ object Dependencies {
   )
   
   val httpConnector = Seq(
-    Dependency.camelJetty, Dependency.logback, Dependency.scalatest, Dependency.akkaTestKit
+    Dependency.camelJetty, camelWebSocket, Dependency.logback, Dependency.scalatest, 
+    Dependency.akkaTestKit
   )
 
   val fileConnector = Seq(
@@ -147,15 +148,16 @@ object Dependencies {
 }
 
 object Dependency {
-  val akkaActor     = "com.typesafe.akka" %% "akka-actor"        % "2.1.0-RC2" cross CrossVersion.full
-  val akkaCamel     = "com.typesafe.akka" %% "akka-camel"        % "2.1.0-RC2" cross CrossVersion.full
-  val akkaSlf4j     = "com.typesafe.akka" %% "akka-slf4j"        % "2.1.0-RC2" cross CrossVersion.full
-  val akkaTestKit   = "com.typesafe.akka" %% "akka-testkit"      % "2.1.0-RC2"     % "test" cross CrossVersion.full
-  val logback       = "ch.qos.logback"    % "logback-classic"    % "1.0.3"         % "runtime"
-  val scalatest     = "org.scalatest"     %% "scalatest"         % "2.0.M4"        % "test" cross CrossVersion.full
+  val akkaActor      = "com.typesafe.akka" %% "akka-actor"        % "2.1.0-RC2" cross CrossVersion.full
+  val akkaCamel      = "com.typesafe.akka" %% "akka-camel"        % "2.1.0-RC2" cross CrossVersion.full
+  val akkaSlf4j      = "com.typesafe.akka" %% "akka-slf4j"        % "2.1.0-RC2" cross CrossVersion.full
+  val akkaTestKit    = "com.typesafe.akka" %% "akka-testkit"      % "2.1.0-RC2"     % "test" cross CrossVersion.full
+  val logback        = "ch.qos.logback"    % "logback-classic"    % "1.0.3"         % "runtime"
+  val scalatest      = "org.scalatest"     %% "scalatest"         % "2.0.M4"        % "test" cross CrossVersion.full
 
   // Akka 2.1 uses camel 2.10
-  val camelJetty    = "org.apache.camel"  % "camel-jetty"        % "2.10.0"
+  val camelJetty     = "org.apache.camel"  % "camel-jetty"        % "2.10.0"
+  val camelWebSocket = "org.apache.camel"  % "camel-websocket"    % "2.10.0"
 
 }
 

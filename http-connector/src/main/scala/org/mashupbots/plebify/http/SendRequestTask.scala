@@ -13,30 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-package org.mashupbots.plebify.file
+package org.mashupbots.plebify.http
 
 import org.mashupbots.plebify.core.EventData
 import org.mashupbots.plebify.core.TaskExecutionRequest
 import org.mashupbots.plebify.core.config.TaskExecutionConfig
-
 import akka.camel.CamelMessage
 import akka.camel.Oneway
 import akka.camel.Producer
+import org.apache.camel.Exchange
+import akka.camel.CamelMessage
 
 /**
- * File created event.
+ * Send HTTP request
  *
- * Saves data to the specified file
+ * Sends
  *
  * ==Parameters==
- *  - '''uri''': See [[http://camel.apache.org/file2.html Apache Camel file component]] for options.
+ *  - '''uri''': See [[http://camel.apache.org/jetty.html Apache Camel jetty component]] for options.
+ *  - '''method''': GET, POST or PUT. Defaults to POST.
  *
  * ==Event Data==
- *  - '''Content''': Contents to save to file
+ *  - '''Content''': Content to send. Ignored if method is GET.
  *
  * @param config Task configuration
  */
-class SaveFileTask(config: TaskExecutionConfig) extends Producer with Oneway with akka.actor.ActorLogging {
+class SendRequestTask(config: TaskExecutionConfig) extends Producer with Oneway with akka.actor.ActorLogging {
 
   def endpointUri = config.params("uri")
 
@@ -45,7 +47,14 @@ class SaveFileTask(config: TaskExecutionConfig) extends Producer with Oneway wit
    */
   override def transformOutgoingMessage(msg: Any) = msg match {
     case msg: TaskExecutionRequest => {
-      CamelMessage(msg.eventNotification.data(EventData.Content), Map.empty)
+      val method = config.params.getOrElse("method", "POST")
+      val content = if (method == "GET") "" else msg.eventNotification.data.getOrElse(EventData.Content, "")
+      val header = Map(
+        (Exchange.HTTP_METHOD, method),
+        (Exchange.CONTENT_TYPE, msg.eventNotification.data(EventData.ContentType)),
+        (Exchange.CONTENT_ENCODING, "UTF-8"))
+
+      CamelMessage(content, header)
     }
   }
 }

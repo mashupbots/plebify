@@ -16,15 +16,12 @@
 package org.mashupbots.plebify.file
 
 import java.util.Date
-
-import scala.collection.immutable.List.apply
-
 import org.mashupbots.plebify.core.EventData
 import org.mashupbots.plebify.core.EventNotification
 import org.mashupbots.plebify.core.EventSubscriptionRequest
-
 import akka.camel.CamelMessage
 import akka.camel.Consumer
+import org.apache.camel.Exchange
 
 /**
  * File created event.
@@ -34,34 +31,38 @@ import akka.camel.Consumer
  *
  * ==Parameters==
  *  - '''uri''': See [[http://camel.apache.org/file2.html Apache Camel file component]] for options.
+ *  - '''mime-type''': Optional mime type. If not specified, one will be extrapolated using the file name extension.
  *
  * ==Event Data==
  *  - '''Date''': Timestamp when event occurred
  *  - '''Content''': Contents of the file
- *  - '''Content-Length''': Length of the file
- *  - '''Last-Modified''': When the file was last changed
- *  - '''File-Name''': Name of file without path
- *  - '''Absolute-File-Name''': Full path to the file
+ *  - '''ContentLength''': Length of the file
+ *  - '''ContentType''': MIME Type
+ *  - '''LastModified''': When the file was last changed
+ *  - '''FileName''': Name of file without path
  *
  * @param request Subscription request
  */
 class FileCreatedEvent(request: EventSubscriptionRequest) extends Consumer with akka.actor.ActorLogging {
 
   def endpointUri = request.config.params("uri")
+  val defaultMimeType: Option[String] = request.config.params.get("mime-type")
 
   def receive = {
     case msg: CamelMessage =>
       try {
-        val fileName = msg.headers("CamelFileNameOnly").toString
-        val contentLength = msg.headers("CamelFileLength").toString
-        val lastModified = EventData.dateTimeToString(msg.headers("CamelFileLastModified").asInstanceOf[Date])
-        val content = msg.bodyAs[String]
-        val data = List(
+        log.debug("FileCreatedEvent: {}", msg)
+        val fileName = EventData.readCamelHeader(msg, "CamelFileNameOnly")
+        val mimeType = if (defaultMimeType.isDefined) defaultMimeType.get else EventData.fileNameToMimeType(fileName)
+
+        val data: Map[String, String] = Map(            
+          (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
           (EventData.Date, EventData.dateTimeToString(new Date())),
-          (EventData.Content, content),
-          (EventData.ContentLength, contentLength),
-          (EventData.LastModified, lastModified),
-          ("FileName", fileName)).toMap
+          (EventData.Content, if (msg.body == null) "" else msg.bodyAs[String]),
+          (EventData.ContentLength, EventData.readCamelHeader(msg, "CamelFileLength")),
+          (EventData.ContentType, mimeType),
+          (EventData.LastModified, EventData.readCamelHeader(msg, "CamelFileLastModified")),
+          ("FileName", fileName))
 
         request.job ! EventNotification(request.config, data)
       } catch {
