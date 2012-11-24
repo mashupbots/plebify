@@ -47,18 +47,24 @@ class HttpConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
   }
   
   def instanceEventActor(req: EventSubscriptionRequest): ActorRef = {
-    if (req.config.connectorEvent == HttpConnector.RequestReceived) {
-      context.actorOf(Props(new RequestReceivedEvent(req)), name = createActorName(req.config))
-    } else {
-      throw new Error(s"Unrecognised event ${req.config.connectorEvent}")
+    req.config.connectorEvent match {
+      case HttpConnector.RequestReceived =>
+        context.actorOf(Props(new RequestReceivedEvent(req)), name = createActorName(req.config))
+      case HttpConnector.FrameReceived =>
+        context.actorOf(Props(new FrameReceivedEvent(req)), name = createActorName(req.config))
+      case x => 
+        throw new Error(s"Unrecognised event ${req.config.connectorEvent}") 
     }
   }
 
   def instanceTaskActor(req: TaskExecutionRequest): ActorRef = {
-    if (req.config.connectorTask == HttpConnector.SendRequest) {
-      context.actorOf(Props(new SendRequestTask(req.config)), createActorName(req.config))
-    } else {
-      throw new Error(s"Unrecognised task ${req.config.connectorTask}")
+    req.config.connectorTask match {
+      case HttpConnector.SendRequest =>
+        context.actorOf(Props(new SendRequestTask(req.config)), createActorName(req.config))
+      case HttpConnector.SendFrame =>
+        context.actorOf(Props(new SendFrameTask(req.config)), createActorName(req.config))
+      case x => 
+        throw new Error(s"Unrecognised task ${req.config.connectorTask}") 
     }
   }
 }
@@ -69,6 +75,8 @@ class HttpConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
 object HttpConnector {
 
   val RequestReceived = "request-received"
+  val FrameReceived = "frame-received"
 
   val SendRequest = "send-request"
+  val SendFrame = "send-frame"
 }

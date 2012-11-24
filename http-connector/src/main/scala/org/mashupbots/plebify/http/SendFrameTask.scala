@@ -25,49 +25,31 @@ import org.apache.camel.Exchange
 import akka.camel.CamelMessage
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import org.apache.camel.component.websocket.WebsocketConstants
 /**
- * Sends a HTTP request to the specified end point
+ * Starts a websocket server to which clients can subscribe to events
  *
  * ==Parameters==
- *  - '''uri''': See [[http://camel.apache.org/jetty.html Apache Camel jetty component]] for options.
- *  - '''method''': GET, POST or PUT. Defaults to POST.
+ *  - '''uri''': See [[http://camel.apache.org/websocket.html Apache Camel websocket component]] for options.
  *
  * ==Event Data==
- *  - '''Content''': Content to send. Ignored if method is GET.
+ *  - '''Content''': Content to send.
  *
  * @param config Task configuration
  */
-class SendRequestTask(config: TaskExecutionConfig) extends Producer with akka.actor.ActorLogging {
+class SendFrameTask(config: TaskExecutionConfig) extends Producer with akka.actor.ActorLogging {
 
   def endpointUri = config.params("uri")
-  require (endpointUri.startsWith("jetty:"), s"$endpointUri must start with 'jetty:'")
-  
-  override def postStop() { log.info("Stopping") }
+  require(endpointUri.startsWith("websocket:"), s"$endpointUri must start with 'websocket:'")
 
-//  override def postRestart(reason: Throwable) {
-//    log.info("PostRestart")
-//    implicit val ec = context.dispatcher
-//    Await.result(camel.deactivationFutureFor(self)(5 seconds, ec), 5 seconds)
-//    super.postRestart(reason)
-//  }
- 
-  override def preStart() {
-    super.preStart()
-    log.info("Starting")
-  }  
-  
   /**
    * Transforms [[org.mashupbots.plebify.core.TaskExecutionRequest]] into a CamelMessage
    */
   override def transformOutgoingMessage(msg: Any) = msg match {
     case msg: TaskExecutionRequest => {
-      val method = config.params.getOrElse("method", "POST")
-      val content = if (method == "GET") "" else msg.eventNotification.data.getOrElse(EventData.Content, "")
-      val header = Map(
-        (Exchange.HTTP_METHOD, method),
-        (Exchange.CONTENT_TYPE, msg.eventNotification.data(EventData.ContentType)),
-        (Exchange.CONTENT_ENCODING, "UTF-8"))
-
+      log.info("{}", msg)
+      val header = Map((WebsocketConstants.SEND_TO_ALL, "true"))
+      val content = msg.eventNotification.data.getOrElse(EventData.Content, "")
       CamelMessage(content, header)
     }
     case m => log.debug("Unexpected message {}", m)

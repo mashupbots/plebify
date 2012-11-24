@@ -26,39 +26,38 @@ import akka.actor.ExtensionIdProvider
 import akka.actor.ExtendedActorSystem
 import akka.camel.{ CamelMessage, Consumer }
 import akka.actor.Props
+import akka.camel.Producer
 
-class TestSpec extends WordSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfterAll {
-	"test" should {
-	  
-	  "start 2 endpoints on same port" in {
-	    val system = ActorSystem("some-system")
-		val endpoint1 = system.actorOf(Props[MyEndpoint1])
-		val endpoint2 = system.actorOf(Props[MyEndpoint2])
-		
-		Thread.sleep(2000000)
-	  }
-	  
-	}
-}
+class TestSpec4 extends WordSpec with ShouldMatchers {
+  "test4" should {
 
-class MyEndpoint1 extends Consumer {
-  def endpointUri = "jetty:http://localhost:8877/example1"
-  def receive = {
-    case msg: CamelMessage => {
-      //sender ! "Hello1: " + msg.bodyAs[String] + "\n" 
-      sender ! CamelMessage("", Map.empty)
-      println("1:" + msg)
+    "do something" in {
+      val system = ActorSystem("ccc", ConfigFactory.parseString("""
+        	akka {
+			  event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
+			  loglevel = "DEBUG"
+			}    
+    		"""))
+      system.actorOf(Props[MyWsProducer])
+      Thread.sleep(500)
+      system.actorOf(Props[MyWsConsumer])
+
+      Thread.sleep(1000)
     }
+
   }
 }
 
-class MyEndpoint2 extends Consumer {
-  def endpointUri = "jetty:http://localhost:8877/example2"
+class MyWsProducer extends Producer {
+  def endpointUri = "websocket://localhost:9998/consumer"
+
+}
+
+class MyWsConsumer extends Consumer {
+  def endpointUri = "websocket://localhost:9998/consumer"
 
   def receive = {
-    case msg: CamelMessage => {
-      sender ! "Hello2: " + msg + "\n" 
-      println("2:" + msg)
-    }
+    case msg: CamelMessage => println(msg)
+
   }
 }

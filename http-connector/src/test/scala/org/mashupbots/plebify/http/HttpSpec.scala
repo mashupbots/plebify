@@ -37,9 +37,9 @@ import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
 import org.apache.camel.Exchange
 
-object HttpConnectorSpec {
+object HttpSpec {
 
-  val onCreatedSaveConfig = """
+  val onReceiveSendConfig = """
 	on-receive-send-request {
       connectors = [{
           connector-id = "http"
@@ -50,12 +50,12 @@ object HttpConnectorSpec {
           on = [{
               connector-id = "http"
               connector-event = "request-received"
-              uri = "http://localhost:8877/on-receive-send-request"
+              uri = "jetty:http://localhost:8877/on-receive-send-request"
 	        }]
           do = [{
               connector-id = "http"
               connector-task = "send-request"
-              uri = "http://localhost:9977/dummy-listender"
+              uri = "jetty:http://localhost:9977/dummy-listender"
               method = "POST"
               retry-interval = 1
 	        }]
@@ -68,7 +68,7 @@ object HttpConnectorSpec {
 	}    
     """
 
-  lazy val cfg = List(onCreatedSaveConfig).mkString("\n")
+  lazy val cfg = List(onReceiveSendConfig).mkString("\n")
 
   /**
    * Send a GET request
@@ -122,11 +122,11 @@ object HttpConnectorSpec {
 
 }
 
-class HttpConnectorSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec
+class HttpSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec
   with MustMatchers with GivenWhenThen {
 
-  val log = LoggerFactory.getLogger("HttpConnectorSpec")
-  def this() = this(ActorSystem("HttpConnectorSpec", ConfigFactory.parseString(HttpConnectorSpec.cfg)))
+  val log = LoggerFactory.getLogger("HttpSpec")
+  def this() = this(ActorSystem("HttpSpec", ConfigFactory.parseString(HttpSpec.cfg)))
 
   "Http Connector" must {
 
@@ -142,28 +142,36 @@ class HttpConnectorSpec(_system: ActorSystem) extends TestKit(_system) with Impl
       val dummyListener = system.actorOf(Props[DummyHttpListener], "DummyHttpListener")
       Thread.sleep(2000)
 
-      info("Send GET and POST")
+      info("Send POST")
       val (responseCode1, content1) =
-        HttpConnectorSpec.httpPost("http://localhost:8877/on-receive-send-request", "hello", "text/plain")
+        HttpSpec.httpPost("http://localhost:8877/on-receive-send-request", "hello", "text/plain")
       responseCode1 must be(200)
 
-      val (responseCode2, content2) =
-        HttpConnectorSpec.httpGet("http://localhost:8877/on-receive-send-request")
-      responseCode2 must be(200)
-
-      Thread.sleep(500)
+      Thread.sleep(200)
 
       dummyListener ! "dump"
       expectMsgPF(1 seconds) {
         case m: List[_] => {
-          m.size must be(2)
-
+          m.size must be(1)
           val m1 = m(0).asInstanceOf[Map[String, Any]]
           log.info("M1: {}", m1)
           m1("Body") must be("hello")
           m1("Content-Length") must be("5")
           m1("Content-Type") must be("text/plain")
+        }
+      }      
 
+      info("Send GET")
+      val (responseCode2, content2) =
+        HttpSpec.httpGet("http://localhost:8877/on-receive-send-request")
+      responseCode2 must be(200)
+
+      Thread.sleep(200)
+
+      dummyListener ! "dump"
+      expectMsgPF(1 seconds) {
+        case m: List[_] => {
+          m.size must be(2)
           val m2 = m(1).asInstanceOf[Map[String, Any]]
           log.info("M2: {}", m2)
           m2("Content-Length") must be("0")          
@@ -172,7 +180,7 @@ class HttpConnectorSpec(_system: ActorSystem) extends TestKit(_system) with Impl
 
       info("Endpoint has errors, there should be 3 retries 1 second apart")
       val (responseCode5, content5) =
-        HttpConnectorSpec.httpPost("http://localhost:8877/on-receive-send-request", "return error", "text/plain")
+        HttpSpec.httpPost("http://localhost:8877/on-receive-send-request", "return error", "text/plain")
       responseCode5 must be(200)
       
       Thread.sleep(10000)

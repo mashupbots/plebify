@@ -25,7 +25,7 @@ import akka.camel.Consumer
 import org.apache.camel.Exchange
 
 /**
- * HTTP request is received
+ * Processes a HTTP request when it is received
  *
  * Starts and HTTP endpoint and waits for incoming requests.
  *
@@ -38,7 +38,7 @@ import org.apache.camel.Exchange
  * ==Event Data==
  *  - '''Date''': Timestamp when event occurred
  *  - '''Content''': Contents of the file
- *  - '''ContentLength''': Length of the file
+ *  - '''ContentLength''': Length of the content
  *  - '''ContentType''': MIME type
  *  - '''HttpUri''': URI of incoming request
  *  - '''HttpMethod''': HTTP method
@@ -51,7 +51,8 @@ import org.apache.camel.Exchange
  */
 class RequestReceivedEvent(request: EventSubscriptionRequest) extends Consumer with akka.actor.ActorLogging {
 
-  def endpointUri = "jetty:" + request.config.params("uri")
+  def endpointUri = request.config.params("uri")
+  require(endpointUri.startsWith("jetty:"), s"$endpointUri must start with 'jetty:'")
 
   def receive = {
     case msg: CamelMessage =>
