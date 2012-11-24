@@ -22,6 +22,7 @@ import org.mashupbots.plebify.core.EventSubscriptionRequest
 import akka.camel.CamelMessage
 import akka.camel.Consumer
 import org.apache.camel.Exchange
+import scala.util.matching.Regex
 
 /**
  * File created event.
@@ -32,6 +33,8 @@ import org.apache.camel.Exchange
  * ==Parameters==
  *  - '''uri''': See [[http://camel.apache.org/file2.html Apache Camel file component]] for options.
  *  - '''mime-type''': Optional mime type. If not specified, one will be extrapolated using the file name extension.
+ *  - '''contains''': Optional comma separated list of words or phrases to match before the event fires.
+ *  - '''matches''': Optional regular expression to match before the event fires.
  *
  * ==Event Data==
  *  - '''Date''': Timestamp when event occurred
@@ -47,24 +50,42 @@ class FileCreatedEvent(request: EventSubscriptionRequest) extends Consumer with 
 
   def endpointUri = request.config.params("uri")
   val defaultMimeType: Option[String] = request.config.params.get("mime-type")
+  val contains: Option[List[String]] = {
+    val c = request.config.params.get("contains")
+    if (c.isEmpty) None
+    else if (c.get.length == 0) None
+    else Some(c.get.split(",").toList.filter(!_.isEmpty))
+  }
+  val matches: Option[String] = request.config.params.get("matches")
 
   def receive = {
     case msg: CamelMessage =>
       try {
         log.debug("FileCreatedEvent: {}", msg)
+
         val fileName = EventData.readCamelHeader(msg, "CamelFileNameOnly")
-        val mimeType = if (defaultMimeType.isDefined) defaultMimeType.get else EventData.fileNameToMimeType(fileName)
+        val content = if (msg.body == null) "" else msg.bodyAs[String]
+        val fireEvent = {
+          if (contains.isDefined) contains.get.foldLeft(false)((result, word) => result || content.contains(word))
+          else if (matches.isDefined) content.matches(matches.get)
+          else true
+        }
 
-        val data: Map[String, String] = Map(            
-          (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
-          (EventData.Date, EventData.dateTimeToString(new Date())),
-          (EventData.Content, if (msg.body == null) "" else msg.bodyAs[String]),
-          (EventData.ContentLength, EventData.readCamelHeader(msg, "CamelFileLength")),
-          (EventData.ContentType, mimeType),
-          (EventData.LastModified, EventData.readCamelHeader(msg, "CamelFileLastModified")),
-          ("FileName", fileName))
+        if (fireEvent) {
+          val mimeType = if (defaultMimeType.isDefined) defaultMimeType.get else EventData.fileNameToMimeType(fileName)
+          val data = Map(
+            (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
+            (EventData.Date, EventData.dateTimeToString(new Date())),
+            (EventData.Content, content),
+            (EventData.ContentLength, EventData.readCamelHeader(msg, "CamelFileLength")),
+            (EventData.ContentType, mimeType),
+            (EventData.LastModified, EventData.readCamelHeader(msg, "CamelFileLastModified")),
+            ("FileName", fileName))
 
-        request.job ! EventNotification(request.config, data)
+          request.job ! EventNotification(request.config, data)
+        } else {
+          log.debug("Ignoring {} because it does not fit contains or matches criteria", fileName)
+        }
       } catch {
         case ex: Throwable =>
           log.error(ex, "Error processing {}", msg)

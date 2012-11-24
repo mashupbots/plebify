@@ -20,7 +20,6 @@ import org.mashupbots.plebify.core.TaskExecutionRequest
 import org.mashupbots.plebify.core.config.TaskExecutionConfig
 
 import akka.camel.CamelMessage
-import akka.camel.Oneway
 import akka.camel.Producer
 
 /**
@@ -36,7 +35,7 @@ import akka.camel.Producer
  *
  * @param config Task configuration
  */
-class SaveFileTask(config: TaskExecutionConfig) extends Producer with Oneway with akka.actor.ActorLogging {
+class SaveFileTask(config: TaskExecutionConfig) extends Producer with akka.actor.ActorLogging {
 
   def endpointUri = config.params("uri")
 

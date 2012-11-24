@@ -29,7 +29,11 @@ import org.apache.camel.component.websocket.WebsocketConstants
 /**
  * A websocket server to which clients can subscribe to events.
  * 
- * This is started by the [[org.mashupbots.plebify.http.HttpConnector]] at startup
+ * This is started by the [[org.mashupbots.plebify.http.HttpConnector]] at startup and represents a websocket
+ * provider.
+ * 
+ * We don't start up a websocket provider within a task because it then requires the task to be executed before the
+ * server is started.
  *
  * @param endpointUri Camel websocket URI
  */

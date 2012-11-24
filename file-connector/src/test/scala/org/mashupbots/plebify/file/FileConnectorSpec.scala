@@ -40,33 +40,6 @@ import akka.testkit.TestKit
 
 object FileConnectorSpec {
 
-  val onCreatedSaveConfig = """
-	on-created-save {
-      connectors = [{
-          connector-id = "file"
-          factory-class-name = "org.mashupbots.plebify.file.FileConnectorFactory"
-        }]
-      jobs = [{
-          job-id = "job1"
-          on = [{
-              connector-id = "file"
-              connector-event = "created"
-              uri = "file:{input1}?initialDelay=500"
-	        }]
-          do = [{
-              connector-id = "file"
-              connector-task = "save"
-              uri = "file:{output1}"
-	        }]
-        }]
-	}
-    
-	akka {
-	  event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
-	  loglevel = "DEBUG"
-	}    
-    """
-
   def createTempDir(namePrefix: String): File = {
     val d = File.createTempFile(namePrefix, "")
     d.delete()
@@ -87,12 +60,92 @@ object FileConnectorSpec {
     new String(Files.readAllBytes(Paths.get(f.toURI)), Charset.forName("UTF-8"))
   }
 
+  val onCreatedSaveConfig = """
+	on-created-save {
+      connectors = [{
+          connector-id = "file"
+          factory-class-name = "org.mashupbots.plebify.file.FileConnectorFactory"
+        }]
+      jobs = [{
+          job-id = "job-on-created-save"
+          on = [{
+              connector-id = "file"
+              connector-event = "created"
+              uri = "file:{input1}?initialDelay=500"
+	        }]
+          do = [{
+              connector-id = "file"
+              connector-task = "save"
+              uri = "file:{output1}"
+	        }]
+        }]
+	}
+    
+	akka {
+	  event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
+	  loglevel = "DEBUG"
+	}    
+    """
   lazy val inputDir1 = FileConnectorSpec.createTempDir("input1")
   lazy val ouputDir1 = FileConnectorSpec.createTempDir("output1")
 
-  lazy val cfg = List(onCreatedSaveConfig).mkString("\n")
+  val containsWordsConfig = """
+	contain-words {
+      connectors = [{
+          connector-id = "file"
+          factory-class-name = "org.mashupbots.plebify.file.FileConnectorFactory"
+        }]
+      jobs = [{
+          job-id = "job-contain-words"
+          on = [{
+              connector-id = "file"
+              connector-event = "created"
+              uri = "file:{input2}?initialDelay=500"
+              contains = "miles davis"
+	        }]
+          do = [{
+              connector-id = "file"
+              connector-task = "save"
+              uri = "file:{output2}"
+	        }]
+        }]
+	}
+    """
+  lazy val inputDir2 = FileConnectorSpec.createTempDir("input2")
+  lazy val ouputDir2 = FileConnectorSpec.createTempDir("output2")
+
+  val matchesRegexConfig = """
+	matches-regex {
+      connectors = [{
+          connector-id = "file"
+          factory-class-name = "org.mashupbots.plebify.file.FileConnectorFactory"
+        }]
+      jobs = [{
+          job-id = "job-matches-regex"
+          on = [{
+              connector-id = "file"
+              connector-event = "created"
+              uri = "file:{input3}?initialDelay=500"
+              matches = "^([\\s\\d\\w]*(ERROR|WARN)[\\s\\d\\w]*)$"
+	        }]
+          do = [{
+              connector-id = "file"
+              connector-task = "save"
+              uri = "file:{output3}"
+	        }]
+        }]
+	}
+    """
+  lazy val inputDir3 = FileConnectorSpec.createTempDir("input3")
+  lazy val ouputDir3 = FileConnectorSpec.createTempDir("output3")
+
+  lazy val cfg = List(onCreatedSaveConfig, containsWordsConfig, matchesRegexConfig).mkString("\n")
     .replace("{input1}", inputDir1.getAbsolutePath())
     .replace("{output1}", ouputDir1.getAbsolutePath())
+    .replace("{input2}", inputDir2.getAbsolutePath())
+    .replace("{output2}", ouputDir2.getAbsolutePath())
+    .replace("{input3}", inputDir3.getAbsolutePath())
+    .replace("{output3}", ouputDir3.getAbsolutePath())
 }
 
 class FileConnectorSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec
@@ -104,12 +157,15 @@ class FileConnectorSpec(_system: ActorSystem) extends TestKit(_system) with Impl
   override def afterAll(configMap: Map[String, Any]) {
     FileConnectorSpec.deleteTempDir(FileConnectorSpec.inputDir1)
     FileConnectorSpec.deleteTempDir(FileConnectorSpec.ouputDir1)
+    FileConnectorSpec.deleteTempDir(FileConnectorSpec.inputDir2)
+    FileConnectorSpec.deleteTempDir(FileConnectorSpec.ouputDir2)
+    FileConnectorSpec.deleteTempDir(FileConnectorSpec.inputDir3)
+    FileConnectorSpec.deleteTempDir(FileConnectorSpec.ouputDir3)
   }
 
   "File Connector" must {
 
     "trigger events and execute tasks" in {
-      // Start
       val engine = system.actorOf(Props(new Engine(configName = "on-created-save")), name = "on-created-save")
       engine ! StartRequest()
       expectMsgPF(5 seconds) {
@@ -118,10 +174,9 @@ class FileConnectorSpec(_system: ActorSystem) extends TestKit(_system) with Impl
         }
       }
 
-      // Do it
       val content = "blah blah blah"
       FileConnectorSpec.writeTextFile(new File(FileConnectorSpec.inputDir1, "justcreated.txt"), content)
-      Thread.sleep(2000)
+      Thread.sleep(3000)
 
       val outputs = FileConnectorSpec.ouputDir1.listFiles()
       outputs.size must be(1)
@@ -130,6 +185,44 @@ class FileConnectorSpec(_system: ActorSystem) extends TestKit(_system) with Impl
       FileConnectorSpec.readTextFile(outputFile) must be(content)
     }
 
+    "ignore files unless it contains the specified words" in {
+      val engine = system.actorOf(Props(new Engine(configName = "contain-words")), name = "contain-words")
+      engine ! StartRequest()
+      expectMsgPF(5 seconds) {
+        case m: StartResponse => {
+          m.isSuccess must be(true)
+        }
+      }
+
+      FileConnectorSpec.writeTextFile(new File(FileConnectorSpec.inputDir2, "A.txt"), "should not fire")
+      FileConnectorSpec.writeTextFile(new File(FileConnectorSpec.inputDir2, "B.txt"), "does not contain our word")
+      FileConnectorSpec.writeTextFile(new File(FileConnectorSpec.inputDir2, "C.txt"), "maceo parker\nmiles davis\n")
+      FileConnectorSpec.writeTextFile(new File(FileConnectorSpec.inputDir2, "D.txt"), "rubbish")
+      Thread.sleep(3000)
+
+      val outputs = FileConnectorSpec.ouputDir2.listFiles()
+      outputs.size must be(1)
+    }
+
+    "ignore files unless it matches the specified regex pattern" in {
+      val engine = system.actorOf(Props(new Engine(configName = "matches-regex")), name = "matches-regex")
+      engine ! StartRequest()
+      expectMsgPF(5 seconds) {
+        case m: StartResponse => {
+          m.isSuccess must be(true)
+        }
+      }
+
+      FileConnectorSpec.writeTextFile(new File(FileConnectorSpec.inputDir3, "1.txt"), "ERROR test\nINFO test")
+      FileConnectorSpec.writeTextFile(new File(FileConnectorSpec.inputDir3, "2.txt"), "blah blah blah")
+      FileConnectorSpec.writeTextFile(new File(FileConnectorSpec.inputDir3, "3.txt"), "crap crap crap")
+      FileConnectorSpec.writeTextFile(new File(FileConnectorSpec.inputDir3, "4.txt"), "\n\n test ERROR stuffed up")
+      Thread.sleep(3000)
+
+      val outputs = FileConnectorSpec.ouputDir3.listFiles()
+      outputs.size must be(2)
+    }
+    
   }
 }
 
