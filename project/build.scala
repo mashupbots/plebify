@@ -134,7 +134,7 @@ object Dependencies {
   )
   
   val httpConnector = Seq(
-    Dependency.camelJetty, camelWebSocket, Dependency.logback, Dependency.scalatest, 
+    Dependency.camelJetty, Dependency.camelWebSocket, Dependency.logback, Dependency.scalatest, 
     Dependency.akkaTestKit
   )
 

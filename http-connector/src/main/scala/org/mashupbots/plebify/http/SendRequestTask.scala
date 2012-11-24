@@ -23,7 +23,8 @@ import akka.camel.Oneway
 import akka.camel.Producer
 import org.apache.camel.Exchange
 import akka.camel.CamelMessage
-
+import scala.concurrent.Await
+import scala.concurrent.duration._
 /**
  * Send HTTP request
  *
@@ -40,10 +41,17 @@ import akka.camel.CamelMessage
  */
 class SendRequestTask(config: TaskExecutionConfig) extends Producer with akka.actor.ActorLogging {
 
-  def endpointUri = config.params("uri")
+  def endpointUri = "jetty:" + config.params("uri")
   
   override def postStop() { log.info("Stopping") }
 
+//  override def postRestart(reason: Throwable) {
+//    log.info("PostRestart")
+//    implicit val ec = context.dispatcher
+//    Await.result(camel.deactivationFutureFor(self)(5 seconds, ec), 5 seconds)
+//    super.postRestart(reason)
+//  }
+ 
   override def preStart() {
     super.preStart()
     log.info("Starting")

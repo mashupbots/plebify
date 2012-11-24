@@ -72,7 +72,7 @@ trait DefaultConnector extends Actor with akka.actor.ActorLogging with Connector
    * producer actor to stop and restart. However, restarting somehow does not work properly because messages are not
    * being sent.  This behaviour is present for camel-jetty
    */
-  def killTaskActorOnFailure: Boolean = true
+  def killTaskActorOnFailure: Boolean = false
 
   /**
    * Message processing
