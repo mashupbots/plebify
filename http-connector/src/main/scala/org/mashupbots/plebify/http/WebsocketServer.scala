@@ -26,25 +26,27 @@ import akka.camel.CamelMessage
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import org.apache.camel.component.websocket.WebsocketConstants
-import akka.actor.Actor
 /**
- * Starts a websocket server to which clients can subscribe to events
+ * A websocket server to which clients can subscribe to events.
+ * 
+ * This is started by the [[org.mashupbots.plebify.http.HttpConnector]] at startup
  *
- * ==Parameters==
- *  - '''websocket-server''': Name of the websocket server as specified in the connector config
- *
- * ==Event Data==
- *  - '''Content''': Content to send.
- *
- * @param config Task configuration
+ * @param endpointUri Camel websocket URI
  */
-class SendFrameTask(config: TaskExecutionConfig) extends Actor with akka.actor.ActorLogging {
+class WebsocketServer(val endpointUri: String) extends Producer with akka.actor.ActorLogging {
 
-  def receive = {
+  require(endpointUri.startsWith("websocket:"), s"$endpointUri must start with 'websocket:'")
+
+  /**
+   * Transforms [[org.mashupbots.plebify.core.TaskExecutionRequest]] into a CamelMessage
+   */
+  override def transformOutgoingMessage(msg: Any) = msg match {
     case msg: TaskExecutionRequest => {
-      val ws = context.actorFor("../" + config.params("websocket-server"))
-      ws.forward(msg)
+      log.info("{}", msg)
+      val header = Map((WebsocketConstants.SEND_TO_ALL, "true"))
+      val content = msg.eventNotification.data.getOrElse(EventData.Content, "")
+      CamelMessage(content, header)
     }
+    case m => log.debug("Unexpected message {}", m)
   }
-  
 }

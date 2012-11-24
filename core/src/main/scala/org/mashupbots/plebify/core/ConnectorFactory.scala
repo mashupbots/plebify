@@ -18,6 +18,7 @@ package org.mashupbots.plebify.core
 import akka.actor.ActorContext
 import org.mashupbots.plebify.core.config.ConnectorConfig
 import akka.actor.ActorRef
+import org.mashupbots.plebify.core.config.JobConfig
 
 /**
  * Factory to instance a new connector actor

@@ -43,17 +43,25 @@ class HttpConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
   log.debug("HttpConnector created with {}", connectorConfig)
 
   override def onStart(msg: StartRequest): StartResponse = {
+    // Start websocket servers (if any) so that clients can subscribe to it
+    connectorConfig.params
+      .filter { case (key, value) => key.startsWith("websocket-server") }
+      .foreach {
+        case (key, value) =>
+          context.actorOf(Props(new WebsocketServer(value)), key)
+      }
+
     StartResponse()
   }
-  
+
   def instanceEventActor(req: EventSubscriptionRequest): ActorRef = {
     req.config.connectorEvent match {
       case HttpConnector.RequestReceived =>
         context.actorOf(Props(new RequestReceivedEvent(req)), name = createActorName(req.config))
       case HttpConnector.FrameReceived =>
         context.actorOf(Props(new FrameReceivedEvent(req)), name = createActorName(req.config))
-      case x => 
-        throw new Error(s"Unrecognised event ${req.config.connectorEvent}") 
+      case x =>
+        throw new Error(s"Unrecognised event ${req.config.connectorEvent}")
     }
   }
 
@@ -63,8 +71,8 @@ class HttpConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
         context.actorOf(Props(new SendRequestTask(req.config)), createActorName(req.config))
       case HttpConnector.SendFrame =>
         context.actorOf(Props(new SendFrameTask(req.config)), createActorName(req.config))
-      case x => 
-        throw new Error(s"Unrecognised task ${req.config.connectorTask}") 
+      case x =>
+        throw new Error(s"Unrecognised task ${req.config.connectorTask}")
     }
   }
 }

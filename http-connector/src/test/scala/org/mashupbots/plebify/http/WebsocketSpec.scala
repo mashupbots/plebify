@@ -50,6 +50,7 @@ object WebsocketSpec {
       connectors = [{
           connector-id = "http"
           factory-class-name = "org.mashupbots.plebify.http.HttpConnectorFactory"
+          websocket-server-1 = "websocket://localhost:9999/out"
         }]
       jobs = [{
           job-id = "job1"
@@ -61,7 +62,7 @@ object WebsocketSpec {
           do = [{
               connector-id = "http"
               connector-task = "send-frame"
-              uri = "websocket://localhost:9999/out?sendToAll=true"
+              websocket-server = websocket-server-1
 	        }]
         }]
 	}
@@ -108,8 +109,6 @@ class WebsocketSpec(_system: ActorSystem) extends TestKit(_system) with Implicit
       val sourceClient = WebsocketSpec.wsFactory.newWebSocketClient()
       val sourceConnection = sourceClient.open(new URI("ws://localhost:9998/in"), sourceWebsocket).get(5, TimeUnit.SECONDS)
       Thread.sleep(500)
-      sourceConnection.sendMessage("testing, testing, 123")
-      Thread.sleep(1000)
       
       info("Start ws-client subscribing to plebify 9999. Wait for messages sent from sourceClient")
       val destWebsocket = new MyWebSocket("deskWebsocket")
