@@ -82,7 +82,9 @@ object SockoBuild extends Build {
   //
   lazy val root = Project(id = "plebify",
                           base = file("."),
-                          settings = defaultSettings) aggregate(core, httpConnector, fileConnector)
+                          settings = defaultSettings) aggregate(core, 
+                            httpConnector, fileConnector, 
+                            mailConnector, dbConnector)
 
   lazy val core = Project(id = "plebify-core",
                          base = file("core"),
@@ -112,7 +114,23 @@ object SockoBuild extends Build {
                            libraryDependencies ++= Dependencies.fileConnector
                          ))  
 
-  lazy val examples = Project(id = "socko-examples",
+  lazy val mailConnector = Project(id = "plebify-mail-connector",
+                         base = file("mail-connector"),
+                         dependencies = Seq(core),
+                         settings = defaultSettings ++ Seq(
+                           description := "Email events and actions",
+                           libraryDependencies ++= Dependencies.mailConnector
+                         ))  
+
+  lazy val dbConnector = Project(id = "plebify-db-connector",
+                         base = file("db-connector"),
+                         dependencies = Seq(core),
+                         settings = defaultSettings ++ Seq(
+                           description := "Database events and actions",
+                           libraryDependencies ++= Dependencies.dbConnector
+                         ))  
+
+  lazy val examples = Project(id = "plebify-examples",
                          base = file("examples"),
                          dependencies = Seq(core, httpConnector, fileConnector),
                          settings = defaultSettings ++ doNotPublishSettings ++ Seq(
@@ -142,6 +160,15 @@ object Dependencies {
     Dependency.logback, Dependency.scalatest, Dependency.akkaTestKit
   )
 
+  val mailConnector = Seq(
+    Dependency.camelMail, Dependency.logback, Dependency.scalatest, Dependency.akkaTestKit
+  )
+
+  val dbConnector = Seq(
+    Dependency.camelJDBC, Dependency.mysql, Dependency.postgresql, 
+    Dependency.logback, Dependency.scalatest, Dependency.akkaTestKit
+  )
+
   val examples = Seq(
     Dependency.logback
   )  
@@ -158,7 +185,11 @@ object Dependency {
   // Akka 2.1 uses camel 2.10
   val camelJetty     = "org.apache.camel"  % "camel-jetty"        % "2.10.0"
   val camelWebSocket = "org.apache.camel"  % "camel-websocket"    % "2.10.0"
+  val camelMail      = "org.apache.camel"  % "camel-mail"         % "2.10.0"
+  val camelJDBC      = "org.apache.camel"  % "camel-jdbc"         % "2.10.0"
 
+  val mysql          = "mysql"             % "mysql-connector-java"    % "5.1.21"
+  val postgresql     = "postgresql"        % "postgresql"              % "9.1-901-1.jdbc4"
 }
 
 
