@@ -29,7 +29,11 @@ import org.apache.camel.Exchange
  *
  * ==Parameters==
  *  - '''uri''': See [[http://camel.apache.org/websocket.html Apache Camel websocket component]] for options.
- *  - '''mime-type''': Mime type of the incoming data. Defaults to 'text/plain'
+ *  - '''mime-type''': Optional mime type of the incoming data. Defaults to `text/plain`.
+ *  - '''contains''': Optional comma separated list of words or phrases to match before the event fires. For example,
+ *    `error, warn` to match files containing the word `error` or `warn`.
+ *  - '''matches''': Optional regular expression to match before the event fires. For example:
+ *    `"^([\\s\\d\\w]*(ERROR|WARN)[\\s\\d\\w]*)$"` to match files containing the words `ERROR` or `WARN`.
  *
  * ==Event Data==
  *  - '''Date''': Timestamp when event occurred
@@ -46,20 +50,39 @@ class FrameReceivedEvent(request: EventSubscriptionRequest) extends Consumer wit
 
   val contentType = request.config.params.getOrElse("mime-type", "text/plain")
 
+  val contains: Option[List[String]] = {
+    val c = request.config.params.get("contains")
+    if (c.isEmpty) None
+    else if (c.get.length == 0) None
+    else Some(c.get.split(",").toList.filter(!_.isEmpty))
+  }
+
+  val matches: Option[String] = request.config.params.get("matches")
+
   def receive = {
     case msg: CamelMessage =>
       try {
         log.debug("FrameReceivedEvent: {}", msg)
 
         val content = if (msg.body == null) "" else msg.bodyAs[String]
-        val data: Map[String, String] = Map(
-          (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
-          (EventData.Date, EventData.dateTimeToString(new Date())),
-          (EventData.Content, content),
-          (EventData.ContentLength, content.length.toString),
-          (EventData.ContentType, contentType))
+        val fireEvent = {
+          if (contains.isDefined) contains.get.foldLeft(false)((result, word) => result || content.contains(word))
+          else if (matches.isDefined) content.matches(matches.get)
+          else true
+        }
 
-        request.job ! EventNotification(request.config, data)
+        if (fireEvent) {
+          val data: Map[String, String] = Map(
+            (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
+            (EventData.Date, EventData.dateTimeToString(new Date())),
+            (EventData.Content, content),
+            (EventData.ContentLength, content.length.toString),
+            (EventData.ContentType, contentType))
+
+          request.job ! EventNotification(request.config, data)
+        } else {
+          log.debug("Ignoring {} websocket text frame because it does not fit contains or matches criteria", content)
+        }
       } catch {
         case ex: Throwable =>
           log.error(ex, "Error processing {}", msg)

@@ -34,6 +34,10 @@ import org.apache.camel.Exchange
  *
  * ==Parameters==
  *  - '''uri''': See [[http://camel.apache.org/jetty.html Apache Camel jetty component]] for options.
+ *  - '''contains''': Optional comma separated list of words or phrases to match before the event fires. For example,
+ *    `error, warn` to match files containing the word `error` or `warn`.
+ *  - '''matches''': Optional regular expression to match before the event fires. For example:
+ *    `"^([\\s\\d\\w]*(ERROR|WARN)[\\s\\d\\w]*)$"` to match files containing the words `ERROR` or `WARN`.
  *
  * ==Event Data==
  *  - '''Date''': Timestamp when event occurred
@@ -54,33 +58,53 @@ class RequestReceivedEvent(request: EventSubscriptionRequest) extends Consumer w
   def endpointUri = request.config.params("uri")
   require(endpointUri.startsWith("jetty:"), s"$endpointUri must start with 'jetty:'")
 
+  val contains: Option[List[String]] = {
+    val c = request.config.params.get("contains")
+    if (c.isEmpty) None
+    else if (c.get.length == 0) None
+    else Some(c.get.split(",").toList.filter(!_.isEmpty))
+  }
+
+  val matches: Option[String] = request.config.params.get("matches")
+
   def receive = {
     case msg: CamelMessage =>
       try {
         log.debug("HttpRequestReceivedEvent: {}", msg)
 
-        val httpFields: Map[String, String] = msg.headers
-          .filter {
-            case (key, value) => !key.startsWith("Camel") && value != null &&
-              !RequestReceivedEvent.headersToIgnore.contains(key)
-          }
-          .map { case (key, value) => ("HttpField_" + key, value.toString) }
+        val content = if (msg.body == null) "" else msg.bodyAs[String]
+        val fireEvent = {
+          if (contains.isDefined) contains.get.foldLeft(false)((result, word) => result || content.contains(word))
+          else if (matches.isDefined) content.matches(matches.get)
+          else true
+        }
 
-        val coreFields: Map[String, String] = Map(
-          (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
-          (EventData.Date, EventData.dateTimeToString(new Date())),
-          (EventData.Content, if (msg.body == null) "" else msg.bodyAs[String]),
-          (EventData.ContentLength, EventData.readCamelHeader(msg, "Content-Length")),
-          (EventData.ContentType, EventData.readCamelHeader(msg, "Content-Type")),
-          ("HttpUri", EventData.readCamelHeader(msg, Exchange.HTTP_URI)),
-          ("HttpMethod", EventData.readCamelHeader(msg, Exchange.HTTP_METHOD)),
-          ("HttpPath", EventData.readCamelHeader(msg, Exchange.HTTP_PATH)),
-          ("HttpQuery", EventData.readCamelHeader(msg, Exchange.HTTP_QUERY)))
+        if (fireEvent) {
+          val httpFields: Map[String, String] = msg.headers
+            .filter {
+              case (key, value) => !key.startsWith("Camel") && value != null &&
+                !RequestReceivedEvent.headersToIgnore.contains(key)
+            }
+            .map { case (key, value) => ("HttpField_" + key, value.toString) }
 
-        val data = coreFields ++ httpFields
-        request.job ! EventNotification(request.config, data)
+          val coreFields: Map[String, String] = Map(
+            (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
+            (EventData.Date, EventData.dateTimeToString(new Date())),
+            (EventData.Content, content),
+            (EventData.ContentLength, EventData.readCamelHeader(msg, "Content-Length")),
+            (EventData.ContentType, EventData.readCamelHeader(msg, "Content-Type")),
+            ("HttpUri", EventData.readCamelHeader(msg, Exchange.HTTP_URI)),
+            ("HttpMethod", EventData.readCamelHeader(msg, Exchange.HTTP_METHOD)),
+            ("HttpPath", EventData.readCamelHeader(msg, Exchange.HTTP_PATH)),
+            ("HttpQuery", EventData.readCamelHeader(msg, Exchange.HTTP_QUERY)))
 
-        sender ! CamelMessage("", Map((Exchange.HTTP_RESPONSE_CODE, "200")))
+          val data = coreFields ++ httpFields
+          request.job ! EventNotification(request.config, data)
+
+          sender ! CamelMessage("", Map((Exchange.HTTP_RESPONSE_CODE, "200")))
+        } else {
+          log.debug("Ignoring HTTP request '{}' because it does not fit contains or matches criteria", content)
+        }
       } catch {
         case ex: Throwable =>
           log.error(ex, "Error processing {}", msg)

@@ -33,8 +33,10 @@ import scala.util.matching.Regex
  * ==Parameters==
  *  - '''uri''': See [[http://camel.apache.org/file2.html Apache Camel file component]] for options.
  *  - '''mime-type''': Optional mime type. If not specified, one will be extrapolated using the file name extension.
- *  - '''contains''': Optional comma separated list of words or phrases to match before the event fires.
- *  - '''matches''': Optional regular expression to match before the event fires.
+ *  - '''contains''': Optional comma separated list of words or phrases to match before the event fires. For example,
+ *    `error, warn` to match files containing the word `error` or `warn`.
+ *  - '''matches''': Optional regular expression to match before the event fires. For example:
+ *    `"^([\\s\\d\\w]*(ERROR|WARN)[\\s\\d\\w]*)$"` to match files containing the words `ERROR` or `WARN`.
  *
  * ==Event Data==
  *  - '''Date''': Timestamp when event occurred
@@ -49,13 +51,16 @@ import scala.util.matching.Regex
 class FileCreatedEvent(request: EventSubscriptionRequest) extends Consumer with akka.actor.ActorLogging {
 
   def endpointUri = request.config.params("uri")
+  
   val defaultMimeType: Option[String] = request.config.params.get("mime-type")
+  
   val contains: Option[List[String]] = {
     val c = request.config.params.get("contains")
     if (c.isEmpty) None
     else if (c.get.length == 0) None
     else Some(c.get.split(",").toList.filter(!_.isEmpty))
   }
+  
   val matches: Option[String] = request.config.params.get("matches")
 
   def receive = {
