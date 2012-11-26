@@ -28,9 +28,9 @@ import org.mashupbots.plebify.core.StartResponse
  * Connector for HTTP events and tasks
  *
  * ==Events==
- *  - '''request-received''': HTTP request is received. See [[[org.mashupbots.plebify.http.HttpRequestRecievedEvent]]]
+ *  - '''request-received''': HTTP request is received. See [[[org.mashupbots.plebify.http.RequestReceivedEvent]]]
  *  - '''frame-received''': WebSocket text frame is received. See
- *    [[[org.mashupbots.plebify.http.HttpWebSocketRecievedEvent]]]
+ *    [[[org.mashupbots.plebify.http.FrameReceivedEvent]]]
  *
  * ==Tasks==
  *  - '''send-request''': Send the data as the specified HTTP request.

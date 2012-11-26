@@ -82,7 +82,6 @@ class FileCreatedEvent(request: EventSubscriptionRequest) extends Consumer with 
             (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
             (EventData.Date, EventData.dateTimeToString(new Date())),
             (EventData.Content, content),
-            (EventData.ContentLength, EventData.readCamelHeader(msg, "CamelFileLength")),
             (EventData.ContentType, mimeType),
             (EventData.LastModified, EventData.readCamelHeader(msg, "CamelFileLastModified")),
             ("FileName", fileName))

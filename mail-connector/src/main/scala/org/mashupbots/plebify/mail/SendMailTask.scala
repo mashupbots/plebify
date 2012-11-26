@@ -56,7 +56,7 @@ class SendMailTask(config: TaskExecutionConfig) extends Producer with akka.actor
     ("subject", config.params.getOrElse("subject", ""))).filter { case (k, v) => v.length > 0 }
 
   /**
-   * Transforms [[org.mashupbots.plebify.core.TaskExecutionRequest]] into a CamelMessage
+   * Transforms TaskExecutionRequest into a CamelMessage
    */
   override def transformOutgoingMessage(msg: Any) = msg match {
     case msg: TaskExecutionRequest => {

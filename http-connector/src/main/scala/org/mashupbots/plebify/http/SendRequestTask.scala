@@ -57,7 +57,7 @@ class SendRequestTask(config: TaskExecutionConfig) extends Producer with akka.ac
   }  
   
   /**
-   * Transforms [[org.mashupbots.plebify.core.TaskExecutionRequest]] into a CamelMessage
+   * Transforms TaskExecutionRequest into a CamelMessage
    */
   override def transformOutgoingMessage(msg: Any) = msg match {
     case msg: TaskExecutionRequest => {

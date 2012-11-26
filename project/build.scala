@@ -27,7 +27,7 @@ object SockoBuild extends Build {
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     
     // Compile options
-    scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-optimize"),
+    scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-optimize", "-feature", "-language:postfixOps"),
     javacOptions  ++= Seq("-Xlint:unchecked", "-Xlint:deprecation"),
     
     // sbtEclipse - see examples https://github.com/typesafehub/sbteclipse/blob/master/sbteclipse-plugin/src/sbt-test/sbteclipse/02-contents/project/Build.scala
@@ -41,7 +41,7 @@ object SockoBuild extends Build {
   // https://github.com/sbt/sbt.github.com/blob/gen-master/src/jekyll/using_sonatype.md
   // http://www.cakesolutions.net/teamblogs/2012/01/28/publishing-sbt-projects-to-nexus/
   // https://docs.sonatype.org/display/Repository/How+To+Generate+PGP+Signatures+With+Maven
-  //    
+  // s
   def plebifyPomExtra = {
     <url>http://www.plebify.com</url>
     <licenses>

@@ -43,7 +43,7 @@ import org.mashupbots.plebify.core.DefaultConnector
  *  - '''received''': When new email arrives. See [[[org.mashupbots.plebify.mail.MailReceivedEvent]]]
  *
  * ==Tasks==
- *  - '''send''': Sends an email. See [[[org.mashupbots.plebify.mail.SendMailEvent]]].
+ *  - '''send''': Sends an email. See [[[org.mashupbots.plebify.mail.SendMailTask]]].
  */
 class MailConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
 

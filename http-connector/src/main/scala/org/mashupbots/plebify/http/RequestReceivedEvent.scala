@@ -91,7 +91,6 @@ class RequestReceivedEvent(request: EventSubscriptionRequest) extends Consumer w
             (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
             (EventData.Date, EventData.dateTimeToString(new Date())),
             (EventData.Content, content),
-            (EventData.ContentLength, EventData.readCamelHeader(msg, "Content-Length")),
             (EventData.ContentType, EventData.readCamelHeader(msg, "Content-Type")),
             ("HttpUri", EventData.readCamelHeader(msg, Exchange.HTTP_URI)),
             ("HttpMethod", EventData.readCamelHeader(msg, Exchange.HTTP_METHOD)),

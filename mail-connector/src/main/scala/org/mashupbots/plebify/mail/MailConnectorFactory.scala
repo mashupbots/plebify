@@ -22,7 +22,7 @@ import akka.actor.ActorRef
 import akka.actor.Props
 
 /**
- * Instances the [[org.mashupbots.plebify.http.MailConnector]] actor
+ * Instances the [[org.mashupbots.plebify.mail.MailConnector]] actor
  */
 class MailConnectorFactory extends ConnectorFactory {
   def create(context: ActorContext, connectorConfig: ConnectorConfig): ActorRef = {

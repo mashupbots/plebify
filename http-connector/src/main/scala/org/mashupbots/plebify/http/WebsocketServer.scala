@@ -42,7 +42,7 @@ class WebsocketServer(val endpointUri: String) extends Producer with akka.actor.
   require(endpointUri.startsWith("websocket:"), s"$endpointUri must start with 'websocket:'")
 
   /**
-   * Transforms [[org.mashupbots.plebify.core.TaskExecutionRequest]] into a CamelMessage
+   * Transforms TaskExecutionRequest into a CamelMessage
    */
   override def transformOutgoingMessage(msg: Any) = msg match {
     case msg: TaskExecutionRequest => {

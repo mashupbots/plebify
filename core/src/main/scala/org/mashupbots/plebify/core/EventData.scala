@@ -44,11 +44,6 @@ object EventData {
   val Content = "Content"
 
   /**
-   * Content Length
-   */
-  val ContentLength = "ContentLength"
-
-  /**
    * Last modified date in ISO 8601 format
    */
   val LastModified = "LastModified"

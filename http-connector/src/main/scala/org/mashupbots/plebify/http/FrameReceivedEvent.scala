@@ -76,7 +76,6 @@ class FrameReceivedEvent(request: EventSubscriptionRequest) extends Consumer wit
             (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
             (EventData.Date, EventData.dateTimeToString(new Date())),
             (EventData.Content, content),
-            (EventData.ContentLength, content.length.toString),
             (EventData.ContentType, contentType))
 
           request.job ! EventNotification(request.config, data)

@@ -75,7 +75,6 @@ class MailReceivedEvent(request: EventSubscriptionRequest) extends Consumer with
             (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
             (EventData.Date, EventData.dateTimeToString(new Date())),
             (EventData.Content, content),
-            (EventData.ContentLength, content.length.toString),
             (EventData.ContentType, "text/plain"))
 
           request.job ! EventNotification(request.config, data)

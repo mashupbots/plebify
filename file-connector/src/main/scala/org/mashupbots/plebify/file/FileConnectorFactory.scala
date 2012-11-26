@@ -22,7 +22,7 @@ import akka.actor.ActorRef
 import akka.actor.Props
 
 /**
- * Instances the [[org.mashupbots.plebify.http.FileConnector]] actor
+ * Instances the [[org.mashupbots.plebify.file.FileConnector]] actor
  */
 class FileConnectorFactory extends ConnectorFactory {
   def create(context: ActorContext, connectorConfig: ConnectorConfig): ActorRef = {
