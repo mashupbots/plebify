@@ -165,7 +165,7 @@ object Dependencies {
   )
 
   val dbConnector = Seq(
-    Dependency.camelJDBC, Dependency.mysql, Dependency.postgresql, 
+    Dependency.camelJDBC, Dependency.mysql, Dependency.postgresql, Dependency.commonsDbcp,
     Dependency.logback, Dependency.scalatest, Dependency.akkaTestKit
   )
 
@@ -188,6 +188,8 @@ object Dependency {
   val camelMail      = "org.apache.camel"  % "camel-mail"         % "2.10.0"
   val camelJDBC      = "org.apache.camel"  % "camel-jdbc"         % "2.10.0"
 
+  // Extras for database dependencies
+  val commonsDbcp    = "commons-dbcp"      % "commons-dbcp"            % "1.4"
   val mysql          = "mysql"             % "mysql-connector-java"    % "5.1.21"
   val postgresql     = "postgresql"        % "postgresql"              % "9.1-901-1.jdbc4"
 }

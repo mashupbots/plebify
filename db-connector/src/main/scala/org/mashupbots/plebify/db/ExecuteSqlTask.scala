@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-package org.mashupbots.plebify.file
+package org.mashupbots.plebify.db
 
 import org.mashupbots.plebify.core.EventData
 import org.mashupbots.plebify.core.TaskExecutionRequest
@@ -23,28 +23,35 @@ import akka.camel.CamelMessage
 import akka.camel.Producer
 
 /**
- * Save content to file task
- *
- * Saves data to the specified file
+ * Executes a SQL insert or update command
  *
  * ==Parameters==
- *  - '''uri''': See [[http://camel.apache.org/file2.html Apache Camel file component]] for options.
+ *  - '''datasource''': Name of datasource as specified in the connector config
+ *  - '''sql''': SQL statement to execute
+ *  - '''max-rows''': Optional maximum number of rows to be returned if this is a query query.
+ *    Defaults to `0` if not supplied.
  *
  * ==Event Data==
- *  - '''Content''': Contents to save to file
+ *  - '''Content''': to replace the placeholder in the sql statement
  *
  * @param config Task configuration
  */
-class SaveFileTask(config: TaskExecutionConfig) extends Producer with akka.actor.ActorLogging {
+class ExecuteSqlTask(config: TaskExecutionConfig) extends Producer with akka.actor.ActorLogging {
 
-  def endpointUri = config.params("uri")
+  val sqlTemplate = config.params("sql")
+  val datasource = config.params("datasource")
+  val maxRows = config.params.getOrElse("max-rows", "100")
+
+  def endpointUri: String = config.params(s"jdbc:${datasource}?readSize=${maxRows}")
 
   /**
    * Transforms [[org.mashupbots.plebify.core.TaskExecutionRequest]] into a CamelMessage
    */
   override def transformOutgoingMessage(msg: Any) = msg match {
     case msg: TaskExecutionRequest => {
-      CamelMessage(msg.eventNotification.data(EventData.Content), Map.empty)
+
+      val sqlStatement = sqlTemplate.replace("{{content}}", msg.eventNotification.data(EventData.Content))
+      CamelMessage(sqlStatement, Map.empty)
     }
   }
 }

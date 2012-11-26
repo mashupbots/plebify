@@ -4,7 +4,6 @@ plebify
 A simple event triggered task runner.
 
 
-
 What does Plebify do?
 ---------------------
 Most large application that we've worked on always have associated manual tasks such as:
@@ -71,7 +70,7 @@ Building Plebify
 ----------------
 - Download and install `sbt <http://www.scala-sbt.org/>`_ 0.12.1.
 
-- Get our the code from github
+- Clone our the code from github
 
 - Run ``sbt`` from the root source directory
 

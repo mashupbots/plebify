@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-package org.mashupbots.plebify.file
+package org.mashupbots.plebify.mail
 
 import scala.concurrent.duration.DurationInt
 import scala.util.Failure
@@ -37,22 +37,22 @@ import org.mashupbots.plebify.core.StartResponse
 import org.mashupbots.plebify.core.DefaultConnector
 
 /**
- * Connector to the file system.
+ * Connector to email
  *
  * ==Events==
- *  - '''created''': When the specified file is created. See [[[org.mashupbots.plebify.file.FileCreatedEvent]]]
+ *  - '''received''': When new email arrives. See [[[org.mashupbots.plebify.mail.MailReceivedEvent]]]
  *
  * ==Tasks==
- *  - '''save''': Save data to the specified file. See [[[org.mashupbots.plebify.file.SaveFileTask]]].
+ *  - '''send''': Sends an email. See [[[org.mashupbots.plebify.mail.SendMailEvent]]].
  */
-class FileConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
+class MailConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
 
-  log.debug("FileConnector created with {}", connectorConfig)
+  log.debug("MailConnector created with {}", connectorConfig)
 
   def instanceEventActor(req: EventSubscriptionRequest): ActorRef = {
     req.config.connectorEvent match {
-      case FileConnector.FileCreatedEvent =>
-        context.actorOf(Props(new FileCreatedEvent(req)), name = createActorName(req.config))
+      case MailConnector.MailReceivedEvent =>
+        context.actorOf(Props(new MailReceivedEvent(req)), name = createActorName(req.config))
       case unknown =>
         throw new Error(s"Unrecognised event $unknown")
     }
@@ -60,8 +60,8 @@ class FileConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
 
   def instanceTaskActor(req: TaskExecutionRequest): ActorRef = {
     req.config.connectorTask match {
-      case FileConnector.SaveFileTask =>
-        context.actorOf(Props(new SaveFileTask(req.config)), createActorName(req.config))
+      case MailConnector.SendMailTask =>
+        context.actorOf(Props(new SendMailTask(req.config)), createActorName(req.config))
       case unknown =>
         throw new Error(s"Unrecognised task $unknown")
     }
@@ -71,9 +71,9 @@ class FileConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
 /**
  * Companion object of FileConnector class.
  */
-object FileConnector {
+object MailConnector {
 
-  val FileCreatedEvent = "created"
+  val MailReceivedEvent = "received"
 
-  val SaveFileTask = "save"
+  val SendMailTask = "send"
 }
