@@ -36,6 +36,8 @@ import akka.camel.Producer
  *  - '''cc''': Optional CC recipients (the receivers of the mail). Separate multiple email addresses with a comma.
  *  - '''bcc''': Optional BCC recipients (the receivers of the mail). Separate multiple email addresses with a comma.
  *  - '''subject''': Optional subject of the email
+ *  - '''template''': Optional template for the body. If not specified, the value of `Contents` will
+ *    be emailed.
  *
  * ==Event Data==
  *  - '''Content''': Contents to send in the body of the email
@@ -47,6 +49,7 @@ class SendMailTask(config: TaskExecutionConfig) extends Producer with akka.actor
   def endpointUri: String = config.params("uri")
   require(endpointUri.startsWith("smtp"), "smtp needed to send email")
 
+  val template = config.params.get("template")
   val headers = Map(
     ("to", config.params("to")),
     ("from", config.params("from")),
@@ -61,7 +64,10 @@ class SendMailTask(config: TaskExecutionConfig) extends Producer with akka.actor
   override def transformOutgoingMessage(msg: Any) = msg match {
     case msg: TaskExecutionRequest => {
 
-      CamelMessage(msg.eventNotification.data(EventData.Content), headers)
+      val body = if (template.isDefined) EventData.mergeTemplate(template.get, msg.eventNotification.data)
+      else msg.eventNotification.data(EventData.Content)
+
+      CamelMessage(body, headers)
     }
   }
 }

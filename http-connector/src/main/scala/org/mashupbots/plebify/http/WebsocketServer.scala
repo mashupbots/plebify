@@ -48,7 +48,10 @@ class WebsocketServer(val endpointUri: String) extends Producer with akka.actor.
     case msg: TaskExecutionRequest => {
       log.info("{}", msg)
       val header = Map((WebsocketConstants.SEND_TO_ALL, "true"))
-      val content = msg.eventNotification.data.getOrElse(EventData.Content, "")
+      val template = msg.config.params.get("template")
+      val content = if (template.isDefined) EventData.mergeTemplate(template.get, msg.eventNotification.data)
+    		        else msg.eventNotification.data.getOrElse(EventData.Content, "")
+
       CamelMessage(content, header)
     }
     case m => log.debug("Unexpected message {}", m)

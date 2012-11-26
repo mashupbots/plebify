@@ -20,6 +20,7 @@ import java.text.SimpleDateFormat
 import java.util.TimeZone
 import javax.activation.MimetypesFileTypeMap
 import akka.camel.CamelMessage
+import scala.util.matching.Regex
 
 /**
  * Common definitions and methods for event data handling
@@ -110,6 +111,31 @@ object EventData {
         case _ => v.toString
       }
     } else ""
+  }
+
+  private val templateKeyRegex = new Regex("\\{\\{([\\d\\w]+)\\}\\}")
+
+  /**
+   * Merge data with a template
+   *
+   * This is a very simple implementation. It finds `{{key}}` and replace it with the value of the `key` found in
+   * `data`.
+   *
+   * @param template template
+   * @param data data to merge with the template
+   */
+  def mergeTemplate(template: String, data: Map[String, String]): String = {
+    // Find keys located in the template
+    // Group #1 represents the key. Group #0 is the entire matching string
+    val keys: List[String] = templateKeyRegex.findAllMatchIn(template).map(m => m.group(1)).toList
+
+    // Replace keys with values; if key not found, just leave the placeholder in there
+    val output: String = keys.foldLeft(template)((t, key) => {
+      val placeholder = s"{{$key}}"
+      t.replace(placeholder, data.getOrElse(key, placeholder))
+    })
+
+    output
   }
 
 }

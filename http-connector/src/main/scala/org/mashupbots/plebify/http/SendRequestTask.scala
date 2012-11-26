@@ -31,6 +31,7 @@ import scala.concurrent.duration._
  * ==Parameters==
  *  - '''uri''': See [[http://camel.apache.org/jetty.html Apache Camel jetty component]] for options.
  *  - '''method''': GET, POST or PUT. Defaults to POST.
+ *  - '''template''': Optional template for the post/put data. If not specified, value of `Contents` will be posted.
  *
  * ==Event Data==
  *  - '''Content''': Content to send. Ignored if method is GET.
@@ -40,29 +41,36 @@ import scala.concurrent.duration._
 class SendRequestTask(config: TaskExecutionConfig) extends Producer with akka.actor.ActorLogging {
 
   def endpointUri = config.params("uri")
-  require (endpointUri.startsWith("jetty:"), s"$endpointUri must start with 'jetty:'")
-  
-  override def postStop() { log.info("Stopping") }
+  require(endpointUri.startsWith("jetty:"), s"$endpointUri must start with 'jetty:'")
 
-//  override def postRestart(reason: Throwable) {
-//    log.info("PostRestart")
-//    implicit val ec = context.dispatcher
-//    Await.result(camel.deactivationFutureFor(self)(5 seconds, ec), 5 seconds)
-//    super.postRestart(reason)
-//  }
- 
+  val template = config.params.get("template")
+
+  override def postStop() {
+    log.info("Stopping")
+  }
+
+  //  override def postRestart(reason: Throwable) {
+  //    log.info("PostRestart")
+  //    implicit val ec = context.dispatcher
+  //    Await.result(camel.deactivationFutureFor(self)(5 seconds, ec), 5 seconds)
+  //    super.postRestart(reason)
+  //  }
+
   override def preStart() {
     super.preStart()
     log.info("Starting")
-  }  
-  
+  }
+
   /**
    * Transforms TaskExecutionRequest into a CamelMessage
    */
   override def transformOutgoingMessage(msg: Any) = msg match {
     case msg: TaskExecutionRequest => {
       val method = config.params.getOrElse("method", "POST")
-      val content = if (method == "GET") "" else msg.eventNotification.data.getOrElse(EventData.Content, "")
+      val content = if (method == "GET") ""
+    	  		    else if (template.isDefined) EventData.mergeTemplate(template.get, msg.eventNotification.data)
+    		        else msg.eventNotification.data.getOrElse(EventData.Content, "")
+      
       val header = Map(
         (Exchange.HTTP_METHOD, method),
         (Exchange.CONTENT_TYPE, msg.eventNotification.data(EventData.ContentType)),

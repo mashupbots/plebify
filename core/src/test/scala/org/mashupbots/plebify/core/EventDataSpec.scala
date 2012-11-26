@@ -24,27 +24,38 @@ import java.util.GregorianCalendar
 import java.util.Calendar
 
 class EventDataSpec extends WordSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfterAll {
-  
+
   "EventData" should {
 
     "convert dates" in {
       val d = new Date()
       val s = EventData.dateTimeToString(d)
       val dd = EventData.stringToDateTime(s)
-      
+
       val cal = new GregorianCalendar()
       cal.setTime(d)
       cal.set(Calendar.MILLISECOND, 0)
-      
-      cal.getTimeInMillis() should equal (dd.getTime())      
+
+      cal.getTimeInMillis() should equal(dd.getTime())
     }
 
-    "Find MIME Types" in  {      
+    "Find MIME Types" in {
       EventData.fileNameToMimeType("test.txt") should be("text/plain")
       EventData.fileNameToMimeType("test.csv") should be("text/csv")
       EventData.fileNameToMimeType("test.xml") should be("application/xml")
       EventData.fileNameToMimeType("test.json") should be("application/json")
       EventData.fileNameToMimeType("test.unknown") should be("application/octet-stream")
     }
+  }
+
+  "merge templates" in {
+    val data = Map(
+      ("one", "1"),
+      ("two", "2"),
+      ("three", "3"))
+
+    val template = "start {{one}} {{two}} middle {{three}} {{four}} end"
+
+    EventData.mergeTemplate(template, data) should be("start 1 2 middle 3 {{four}} end")
   }
 }

@@ -29,6 +29,8 @@ import akka.camel.Producer
  *
  * ==Parameters==
  *  - '''uri''': See [[http://camel.apache.org/file2.html Apache Camel file component]] for options.
+ *  - '''template''': Optional template for the contents of the file. If not specified, the value of `Contents` will
+ *    be saved.
  *
  * ==Event Data==
  *  - '''Content''': Contents to save to file
@@ -39,12 +41,18 @@ class SaveFileTask(config: TaskExecutionConfig) extends Producer with akka.actor
 
   def endpointUri = config.params("uri")
 
+  val template = config.params.get("template")
+
   /**
    * Transforms TaskExecutionRequest into a CamelMessage
    */
   override def transformOutgoingMessage(msg: Any) = msg match {
     case msg: TaskExecutionRequest => {
-      CamelMessage(msg.eventNotification.data(EventData.Content), Map.empty)
+
+      val contents = if (template.isDefined) EventData.mergeTemplate(template.get, msg.eventNotification.data)
+      else msg.eventNotification.data(EventData.Content)
+
+      CamelMessage(contents, Map.empty)
     }
   }
 }
