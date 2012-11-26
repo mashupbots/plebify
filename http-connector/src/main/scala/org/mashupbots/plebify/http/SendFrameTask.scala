@@ -27,6 +27,8 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import org.apache.camel.component.websocket.WebsocketConstants
 import akka.actor.Actor
+import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.mashupbots.plebify.core.TaskExecutionConfigReader
 /**
  * Starts a websocket server to which clients can subscribe to events
  *
@@ -37,13 +39,15 @@ import akka.actor.Actor
  * ==Event Data==
  *  - '''Content''': Content to send.
  *
- * @param config Task configuration
+ * @param connectorConfig Connector configuration.
+ * @param taskConfig Task configuration
  */
-class SendFrameTask(config: TaskExecutionConfig) extends Actor with akka.actor.ActorLogging {
+class SendFrameTask(val connectorConfig: ConnectorConfig, val taskConfig: TaskExecutionConfig) extends Actor 
+  with TaskExecutionConfigReader with akka.actor.ActorLogging {
 
   def receive = {
     case msg: TaskExecutionRequest => {
-      val ws = context.actorFor("../" + config.params("websocket-server"))
+      val ws = context.actorFor("../" + configValueFor("websocket-server"))
       ws.forward(msg)
     }
   }

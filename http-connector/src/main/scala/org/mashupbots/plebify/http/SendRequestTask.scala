@@ -25,6 +25,8 @@ import org.apache.camel.Exchange
 import akka.camel.CamelMessage
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.mashupbots.plebify.core.TaskExecutionConfigReader
 /**
  * Sends a HTTP request to the specified end point
  *
@@ -36,14 +38,16 @@ import scala.concurrent.duration._
  * ==Event Data==
  *  - '''Content''': Content to send. Ignored if method is GET.
  *
- * @param config Task configuration
+ * @param connectorConfig Connector configuration.
+ * @param taskConfig Task configuration
  */
-class SendRequestTask(config: TaskExecutionConfig) extends Producer with akka.actor.ActorLogging {
+class SendRequestTask(val connectorConfig: ConnectorConfig, val taskConfig: TaskExecutionConfig) extends Producer
+  with TaskExecutionConfigReader with akka.actor.ActorLogging {
 
-  def endpointUri = config.params("uri")
+  def endpointUri = configValueFor("uri")
   require(endpointUri.startsWith("jetty:"), s"$endpointUri must start with 'jetty:'")
 
-  val template = config.params.get("template")
+  val template = configValueFor("template", "")
 
   override def postStop() {
     log.info("Stopping")
@@ -66,11 +70,11 @@ class SendRequestTask(config: TaskExecutionConfig) extends Producer with akka.ac
    */
   override def transformOutgoingMessage(msg: Any) = msg match {
     case msg: TaskExecutionRequest => {
-      val method = config.params.getOrElse("method", "POST")
+      val method = configValueFor("method", "POST")
       val content = if (method == "GET") ""
-    	  		    else if (template.isDefined) EventData.mergeTemplate(template.get, msg.eventNotification.data)
-    		        else msg.eventNotification.data.getOrElse(EventData.Content, "")
-      
+      else if (template.isEmpty) msg.eventNotification.data.getOrElse(EventData.Content, "")
+      else EventData.mergeTemplate(template, msg.eventNotification.data)
+
       val header = Map(
         (Exchange.HTTP_METHOD, method),
         (Exchange.CONTENT_TYPE, msg.eventNotification.data(EventData.ContentType)),

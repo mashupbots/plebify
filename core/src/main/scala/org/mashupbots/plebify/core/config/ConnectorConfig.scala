@@ -48,7 +48,7 @@ case class ConnectorConfig(
     config.getString("connector-id"),
     ConfigUtil.getString(config, "description", ""),
     config.getString("factory-class-name"),
-    ConfigUtil.getInt(config, "initialization-timeout", 5),
+    ConfigUtil.getInt(config, "initialization-timeout", 30),
     ConfigUtil.getParameters(config, 
         List("connector-id", "factory-class-name", "description", "initialization-timeout")))
 

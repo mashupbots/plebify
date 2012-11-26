@@ -23,6 +23,8 @@ import org.mashupbots.plebify.core.EventSubscriptionRequest
 import akka.camel.CamelMessage
 import akka.camel.Consumer
 import org.apache.camel.Exchange
+import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.mashupbots.plebify.core.EventSubscriptionConfigReader
 
 /**
  * Processes a HTTP request when it is received
@@ -51,21 +53,22 @@ import org.apache.camel.Exchange
  *  - '''HttpField_*''': HTTP headers and posted form data fields. For example `User-Agent` will be stored as
  *    `HttpField_User-Agent`.
  *
+ * @param connectorConfig Connector configuration.
  * @param request Subscription request
  */
-class RequestReceivedEvent(request: EventSubscriptionRequest) extends Consumer with akka.actor.ActorLogging {
+class RequestReceivedEvent(val connectorConfig: ConnectorConfig, val request: EventSubscriptionRequest) extends Consumer
+  with EventSubscriptionConfigReader with akka.actor.ActorLogging {
 
-  def endpointUri = request.config.params("uri")
+  def endpointUri = configValueFor("uri")
   require(endpointUri.startsWith("jetty:"), s"$endpointUri must start with 'jetty:'")
 
   val contains: Option[List[String]] = {
-    val c = request.config.params.get("contains")
+    val c = configValueFor("contains", "")
     if (c.isEmpty) None
-    else if (c.get.length == 0) None
-    else Some(c.get.split(",").toList.filter(!_.isEmpty))
+    else Some(c.split(",").toList.filter(!_.isEmpty))
   }
 
-  val matches: Option[String] = request.config.params.get("matches")
+  val matches: String = configValueFor("matches", "")
 
   def receive = {
     case msg: CamelMessage =>
@@ -75,7 +78,7 @@ class RequestReceivedEvent(request: EventSubscriptionRequest) extends Consumer w
         val content = if (msg.body == null) "" else msg.bodyAs[String]
         val fireEvent = {
           if (contains.isDefined) contains.get.foldLeft(false)((result, word) => result || content.contains(word))
-          else if (matches.isDefined) content.matches(matches.get)
+          else if (!matches.isEmpty) content.matches(matches)
           else true
         }
 

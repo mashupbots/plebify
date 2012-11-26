@@ -63,7 +63,7 @@ case class TaskExecutionConfig(
    *
    * Defaults:
    *  - description = empty string
-   *  - execution-timeout = 5 seconds
+   *  - execution-timeout = 30 seconds
    *  - on-success = next
    *  - on-error = fail
    *  - max-retry-count = 3
@@ -79,7 +79,7 @@ case class TaskExecutionConfig(
     config.getString("connector-id"),
     config.getString("connector-task"),
     ConfigUtil.getString(config, "description", ""),
-    ConfigUtil.getInt(config, "execution-timeout", 5),
+    ConfigUtil.getInt(config, "execution-timeout", 30),
     ConfigUtil.getString(config, "on-success", "next"),
     ConfigUtil.getString(config, "on-fail", "fail"),
     ConfigUtil.getInt(config, "max-retry-count", 3),

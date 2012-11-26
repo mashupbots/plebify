@@ -18,9 +18,10 @@ package org.mashupbots.plebify.db
 import org.mashupbots.plebify.core.EventData
 import org.mashupbots.plebify.core.TaskExecutionRequest
 import org.mashupbots.plebify.core.config.TaskExecutionConfig
-
 import akka.camel.CamelMessage
 import akka.camel.Producer
+import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.mashupbots.plebify.core.TaskExecutionConfigReader
 
 /**
  * Executes a SQL insert or update command
@@ -34,15 +35,17 @@ import akka.camel.Producer
  * ==Event Data==
  *  - '''Content''': to replace the placeholder in the sql statement
  *
- * @param config Task configuration
+ * @param connectorConfig Connector configuration.
+ * @param taskConfig Task configuration
  */
-class ExecuteSqlTask(config: TaskExecutionConfig) extends Producer with akka.actor.ActorLogging {
+class ExecuteSqlTask(val connectorConfig: ConnectorConfig, val taskConfig: TaskExecutionConfig) extends Producer
+  with TaskExecutionConfigReader with akka.actor.ActorLogging {
 
-  val sqlTemplate = config.params("sql")
-  val datasource = config.params("datasource")
-  val maxRows = config.params.getOrElse("max-rows", "100")
+  val sqlTemplate = configValueFor("sql")
+  val datasource = configValueFor("datasource")
+  val maxRows = configValueFor("max-rows", "100")
 
-  def endpointUri: String = config.params(s"jdbc:${datasource}?readSize=${maxRows}")
+  def endpointUri: String = configValueFor(s"jdbc:${datasource}?readSize=${maxRows}")
 
   /**
    * Transforms [[org.mashupbots.plebify.core.TaskExecutionRequest]] into a CamelMessage

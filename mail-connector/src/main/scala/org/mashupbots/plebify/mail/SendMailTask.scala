@@ -18,9 +18,11 @@ package org.mashupbots.plebify.mail
 import org.mashupbots.plebify.core.EventData
 import org.mashupbots.plebify.core.TaskExecutionRequest
 import org.mashupbots.plebify.core.config.TaskExecutionConfig
-
 import akka.camel.CamelMessage
 import akka.camel.Producer
+import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.mashupbots.plebify.core.config.ConfigUtil
+import org.mashupbots.plebify.core.TaskExecutionConfigReader
 
 /**
  * Send email task
@@ -28,7 +30,8 @@ import akka.camel.Producer
  * Sends an email to the specified address
  *
  * ==Parameters==
- *  - '''uri''': See [[http://camel.apache.org/mail.html Apache Camel mail component]] for options.
+ *  - '''uri''': See [[http://camel.apache.org/mail.html Apache Camel mail component]] for options. You can also
+ *    define defaults in the connector configuration and refer to them.
  *  - '''to''': The TO recipients (the receivers of the mail). Separate multiple email addresses with a comma.
  *  - '''from''': The FROM email address.
  *  - '''replyTo''': Optional Reply-To recipients (the receivers of the response mail).
@@ -42,21 +45,23 @@ import akka.camel.Producer
  * ==Event Data==
  *  - '''Content''': Contents to send in the body of the email
  *
- * @param config Task configuration
+ * @param connectorConfig Connector configuration.
+ * @param taskConfig Task configuration
  */
-class SendMailTask(config: TaskExecutionConfig) extends Producer with akka.actor.ActorLogging {
+class SendMailTask(val connectorConfig: ConnectorConfig, val taskConfig: TaskExecutionConfig) extends Producer
+  with TaskExecutionConfigReader with akka.actor.ActorLogging {
 
-  def endpointUri: String = config.params("uri")
+  def endpointUri: String = configValueFor("uri")
   require(endpointUri.startsWith("smtp"), "smtp needed to send email")
 
-  val template = config.params.get("template")
+  val template = taskConfig.params.get("template")
   val headers = Map(
-    ("to", config.params("to")),
-    ("from", config.params("from")),
-    ("replyTo", config.params.getOrElse("replyTo", "")),
-    ("cc", config.params.getOrElse("cc", "")),
-    ("bcc", config.params.getOrElse("bcc", "")),
-    ("subject", config.params.getOrElse("subject", ""))).filter { case (k, v) => v.length > 0 }
+    ("to", configValueFor("to")),
+    ("from", configValueFor("from")),
+    ("replyTo", configValueFor("replyTo", "")),
+    ("cc", configValueFor("cc", "")),
+    ("bcc", configValueFor("bcc", "")),
+    ("subject", configValueFor("subject", ""))).filter { case (k, v) => v.length > 0 }
 
   /**
    * Transforms TaskExecutionRequest into a CamelMessage

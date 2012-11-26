@@ -30,7 +30,7 @@ import scala.collection.JavaConversions._
  *       id = "file"
  *       description = ""
  *       factory-class-name = ""
- *       initialization-timeout = 5
+ *       initialization-timeout = 30
  *       param1 = ""
  *     }
  *     {

@@ -48,10 +48,10 @@ object ConfigUtil {
    * @param keysToIgnore Name of keys under `keyPath` to NOT load
    */
   def getParameters(config: Config, keysToIgnore: List[String]): Map[String, String] = {
-   config.entrySet()
-    	.filter(e => !keysToIgnore.contains(e.getKey()))
-    	.map(e => (e.getKey(), config.getString(e.getKey())))
-        .toMap
+    config.entrySet()
+      .filter(e => !keysToIgnore.contains(e.getKey()))
+      .map(e => (e.getKey(), config.getString(e.getKey())))
+      .toMap
   }
 
   /**
@@ -165,4 +165,6 @@ object ConfigUtil {
       case e: Throwable => Nil
     }
   }
+
 }
+

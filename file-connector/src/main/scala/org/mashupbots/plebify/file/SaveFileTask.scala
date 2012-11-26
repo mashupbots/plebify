@@ -18,9 +18,10 @@ package org.mashupbots.plebify.file
 import org.mashupbots.plebify.core.EventData
 import org.mashupbots.plebify.core.TaskExecutionRequest
 import org.mashupbots.plebify.core.config.TaskExecutionConfig
-
 import akka.camel.CamelMessage
 import akka.camel.Producer
+import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.mashupbots.plebify.core.TaskExecutionConfigReader
 
 /**
  * Save content to file task
@@ -35,13 +36,15 @@ import akka.camel.Producer
  * ==Event Data==
  *  - '''Content''': Contents to save to file
  *
- * @param config Task configuration
+ * @param connectorConfig Connector configuration.
+ * @param taskConfig Task configuration
  */
-class SaveFileTask(config: TaskExecutionConfig) extends Producer with akka.actor.ActorLogging {
+class SaveFileTask(val connectorConfig: ConnectorConfig, val taskConfig: TaskExecutionConfig) extends Producer
+  with TaskExecutionConfigReader with akka.actor.ActorLogging {
 
-  def endpointUri = config.params("uri")
+  def endpointUri = configValueFor("uri")
 
-  val template = config.params.get("template")
+  val template = configValueFor("template", "")
 
   /**
    * Transforms TaskExecutionRequest into a CamelMessage
@@ -49,8 +52,8 @@ class SaveFileTask(config: TaskExecutionConfig) extends Producer with akka.actor
   override def transformOutgoingMessage(msg: Any) = msg match {
     case msg: TaskExecutionRequest => {
 
-      val contents = if (template.isDefined) EventData.mergeTemplate(template.get, msg.eventNotification.data)
-      else msg.eventNotification.data(EventData.Content)
+      val contents = if (template.isEmpty) msg.eventNotification.data(EventData.Content)
+      else EventData.mergeTemplate(template, msg.eventNotification.data)
 
       CamelMessage(contents, Map.empty)
     }

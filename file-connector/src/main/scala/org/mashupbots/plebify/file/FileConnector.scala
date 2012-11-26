@@ -52,7 +52,7 @@ class FileConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
   def instanceEventActor(req: EventSubscriptionRequest): ActorRef = {
     req.config.connectorEvent match {
       case FileConnector.FileCreatedEvent =>
-        context.actorOf(Props(new FileCreatedEvent(req)), name = createActorName(req.config))
+        context.actorOf(Props(new FileCreatedEvent(connectorConfig, req)), name = createActorName(req.config))
       case unknown =>
         throw new Error(s"Unrecognised event $unknown")
     }
@@ -61,7 +61,7 @@ class FileConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
   def instanceTaskActor(req: TaskExecutionRequest): ActorRef = {
     req.config.connectorTask match {
       case FileConnector.SaveFileTask =>
-        context.actorOf(Props(new SaveFileTask(req.config)), createActorName(req.config))
+        context.actorOf(Props(new SaveFileTask(connectorConfig, req.config)), createActorName(req.config))
       case unknown =>
         throw new Error(s"Unrecognised task $unknown")
     }

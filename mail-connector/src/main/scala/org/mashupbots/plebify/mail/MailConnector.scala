@@ -52,7 +52,7 @@ class MailConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
   def instanceEventActor(req: EventSubscriptionRequest): ActorRef = {
     req.config.connectorEvent match {
       case MailConnector.MailReceivedEvent =>
-        context.actorOf(Props(new MailReceivedEvent(req)), name = createActorName(req.config))
+        context.actorOf(Props(new MailReceivedEvent(connectorConfig, req)), name = createActorName(req.config))
       case unknown =>
         throw new Error(s"Unrecognised event $unknown")
     }
@@ -61,7 +61,7 @@ class MailConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
   def instanceTaskActor(req: TaskExecutionRequest): ActorRef = {
     req.config.connectorTask match {
       case MailConnector.SendMailTask =>
-        context.actorOf(Props(new SendMailTask(req.config)), createActorName(req.config))
+        context.actorOf(Props(new SendMailTask(connectorConfig, req.config)), createActorName(req.config))
       case unknown =>
         throw new Error(s"Unrecognised task $unknown")
     }

@@ -23,6 +23,8 @@ import org.mashupbots.plebify.core.EventSubscriptionRequest
 import akka.camel.CamelMessage
 import akka.camel.Consumer
 import org.apache.camel.Exchange
+import org.mashupbots.plebify.core.EventSubscriptionConfigReader
+import org.mashupbots.plebify.core.config.ConnectorConfig
 
 /**
  * Starts a websocket client and listens for incoming text frames
@@ -41,9 +43,11 @@ import org.apache.camel.Exchange
  *  - '''ContentLength''': Length of the content
  *  - '''ContentType''': defaults to 'text/plain' if not set in the above parameter
  *
+ * @param connectorConfig Connector configuration.
  * @param request Subscription request
  */
-class FrameReceivedEvent(request: EventSubscriptionRequest) extends Consumer with akka.actor.ActorLogging {
+class FrameReceivedEvent(val connectorConfig: ConnectorConfig, val request: EventSubscriptionRequest) extends Consumer
+  with EventSubscriptionConfigReader with akka.actor.ActorLogging {
 
   def endpointUri = request.config.params("uri")
   require(endpointUri.startsWith("websocket:"), s"$endpointUri must start with 'websocket:'")
@@ -51,13 +55,12 @@ class FrameReceivedEvent(request: EventSubscriptionRequest) extends Consumer wit
   val contentType = request.config.params.getOrElse("mime-type", "text/plain")
 
   val contains: Option[List[String]] = {
-    val c = request.config.params.get("contains")
+    val c = configValueFor("contains", "")
     if (c.isEmpty) None
-    else if (c.get.length == 0) None
-    else Some(c.get.split(",").toList.filter(!_.isEmpty))
+    else Some(c.split(",").toList.filter(!_.isEmpty))
   }
 
-  val matches: Option[String] = request.config.params.get("matches")
+  val matches: String = configValueFor("matches", "")
 
   def receive = {
     case msg: CamelMessage =>
@@ -67,7 +70,7 @@ class FrameReceivedEvent(request: EventSubscriptionRequest) extends Consumer wit
         val content = if (msg.body == null) "" else msg.bodyAs[String]
         val fireEvent = {
           if (contains.isDefined) contains.get.foldLeft(false)((result, word) => result || content.contains(word))
-          else if (matches.isDefined) content.matches(matches.get)
+          else if (!matches.isEmpty) content.matches(matches)
           else true
         }
 

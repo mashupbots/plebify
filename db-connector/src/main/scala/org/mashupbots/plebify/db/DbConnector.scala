@@ -38,10 +38,12 @@ import akka.camel.CamelExtension
  * Connector to databases
  *
  * ==Parameters==
- *  - '''datasource-XXX-driver''': Class name of JDBC database driver. For example, `"com.mysql.jdbc.Driver"`
- *  - '''datasource-XXX-url''': Name name of database driver. For example, `"jdbc:mysql://localhost:3306/student"`
- *  - '''datasource-XXX-user''': Username for accessing the database
- *  - '''datasource-XXX-password''': Password for accessing the database
+ *  - '''XXX-datasource-driver''': Class name of JDBC database driver. For example, `"com.mysql.jdbc.Driver"`
+ *  - '''XXX-datasource-url''': Name name of database driver. For example, `"jdbc:mysql://localhost:3306/student"`
+ *  - '''XXX-datasource-user''': Username for accessing the database
+ *  - '''XXX-datasource-password''': Password for accessing the database
+ *
+ * `XXX` must be a unique datasource name.
  *
  * ==Events==
  *  - '''record-found''': When records matching a SQL select statement are found.
@@ -71,7 +73,7 @@ class DbConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
       dataSourceNames.foreach(dataSourceName => {
 
         // Load underlying JDBC driver
-        Class.forName(connectorConfig.params(s"datasource-${dataSourceName}-driver"))
+        Class.forName(connectorConfig.params(s"${dataSourceName}-datasource-driver"))
 
         //
         // First, we'll need a ObjectPool that serves as the
@@ -91,7 +93,9 @@ class DbConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
         //        
         val connectionProps = new Properties()
         val inputProps = connectorConfig.params.filter {
-          case (k, v) => k.startsWith(s"datasource-${dataSourceName}") && !k.endsWith("-driver") && !k.endsWith("-url")
+          case (k, v) => k.startsWith(s"${dataSourceName}") &&
+            !k.endsWith("-datasource-driver") &&
+            !k.endsWith("-datasource-url")
         }
         inputProps.foreach {
           case (k, v) =>
@@ -100,7 +104,7 @@ class DbConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
             connectionProps.put(propName, propValue)
         }
         val connectionFactory = new DriverManagerConnectionFactory(
-          connectorConfig.params(s"datasource-${dataSourceName}-url"), connectionProps)
+          connectorConfig.params(s"${dataSourceName}-datasource-url"), connectionProps)
 
         //
         // Now we'll create the PoolableConnectionFactory, which wraps
@@ -136,7 +140,7 @@ class DbConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
   def instanceEventActor(req: EventSubscriptionRequest): ActorRef = {
     req.config.connectorEvent match {
       case DbConnector.SqlQueryEvent =>
-        context.actorOf(Props(new SqlQueryEvent(req)), name = createActorName(req.config))
+        context.actorOf(Props(new SqlQueryEvent(connectorConfig, req)), name = createActorName(req.config))
       case unknown =>
         throw new Error(s"Unrecognised event $unknown")
     }
@@ -145,7 +149,7 @@ class DbConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
   def instanceTaskActor(req: TaskExecutionRequest): ActorRef = {
     req.config.connectorTask match {
       case DbConnector.ExecuteSqlTask =>
-        context.actorOf(Props(new ExecuteSqlTask(req.config)), createActorName(req.config))
+        context.actorOf(Props(new ExecuteSqlTask(connectorConfig, req.config)), createActorName(req.config))
       case unknown =>
         throw new Error(s"Unrecognised task $unknown")
     }
@@ -164,7 +168,7 @@ object DbConnector {
   def extractDatasourceNames(connectorConfig: ConnectorConfig): List[String] = {
     (for {
       k <- connectorConfig.params.keys
-      if k.startsWith("datasource-") && k.endsWith("-driver")
-    } yield k.substring(11, k.lastIndexOf("-") - 11)).toList
+      if k.endsWith("-datasource-driver")
+    } yield k.substring(0, k.length - 18)).toList
   }
 }

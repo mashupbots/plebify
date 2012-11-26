@@ -23,6 +23,8 @@ import akka.camel.CamelMessage
 import akka.camel.Consumer
 import org.apache.camel.Exchange
 import scala.util.matching.Regex
+import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.mashupbots.plebify.core.EventSubscriptionConfigReader
 
 /**
  * New email is received
@@ -45,21 +47,22 @@ import scala.util.matching.Regex
  *  - '''To''': Receiver's email address
  *  - '''Subject''': Subject of the email
  *
+ * @param connectorConfig Connector configuration.
  * @param request Subscription request
  */
-class MailReceivedEvent(request: EventSubscriptionRequest) extends Consumer with akka.actor.ActorLogging {
+class MailReceivedEvent(val connectorConfig: ConnectorConfig, val request: EventSubscriptionRequest) extends Consumer
+  with EventSubscriptionConfigReader with akka.actor.ActorLogging {
 
-  def endpointUri = request.config.params("uri")
+  def endpointUri = configValueFor("uri")
   require(endpointUri.startsWith("imap") || endpointUri.startsWith("pop"), "imap or pop3 needed to receive email")
 
   val contains: Option[List[String]] = {
-    val c = request.config.params.get("contains")
+    val c = configValueFor("contains", "")
     if (c.isEmpty) None
-    else if (c.get.length == 0) None
-    else Some(c.get.split(",").toList.filter(!_.isEmpty))
+    else Some(c.split(",").toList.filter(!_.isEmpty))
   }
 
-  val matches: Option[String] = request.config.params.get("matches")
+  val matches: String = configValueFor("matches", "")
 
   def receive = {
     case msg: CamelMessage =>
@@ -69,7 +72,7 @@ class MailReceivedEvent(request: EventSubscriptionRequest) extends Consumer with
         val content = if (msg.body == null) "" else msg.bodyAs[String]
         val fireEvent = {
           if (contains.isDefined) contains.get.foldLeft(false)((result, word) => result || content.contains(word))
-          else if (matches.isDefined) content.matches(matches.get)
+          else if (!matches.isEmpty) content.matches(matches)
           else true
         }
 

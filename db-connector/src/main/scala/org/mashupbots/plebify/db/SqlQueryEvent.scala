@@ -18,15 +18,12 @@ package org.mashupbots.plebify.db
 import java.util.ArrayList
 import java.util.Date
 import java.util.HashMap
-
 import scala.collection.JavaConversions._
 import scala.concurrent.duration.DurationInt
-
 import org.apache.camel.Exchange
 import org.mashupbots.plebify.core.EventData
 import org.mashupbots.plebify.core.EventNotification
 import org.mashupbots.plebify.core.EventSubscriptionRequest
-
 import akka.actor.Actor
 import akka.actor.FSM
 import akka.actor.PoisonPill
@@ -36,6 +33,8 @@ import akka.camel.CamelMessage
 import akka.pattern.ask
 import akka.pattern.pipe
 import akka.util.Timeout.durationToTimeout
+import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.mashupbots.plebify.core.EventSubscriptionConfigReader
 
 /**
  * FSM states for [[org.mashupbots.plebify.db.SqlQueryEvent]]
@@ -67,17 +66,18 @@ trait SqlQueryEventData
  *  - '''Date''': Timestamp when event occurred
  *  - '''Content''': Contents of the email
  *
+ * @param connectorConfig Connector configuration.
  * @param request Subscription request
  */
-class SqlQueryEvent(request: EventSubscriptionRequest) extends Actor with FSM[SqlQueryEventState, SqlQueryEventData]
-  with akka.actor.ActorLogging {
+class SqlQueryEvent(val connectorConfig: ConnectorConfig, val request: EventSubscriptionRequest) extends Actor
+  with FSM[SqlQueryEventState, SqlQueryEventData] with EventSubscriptionConfigReader with akka.actor.ActorLogging {
 
   import context.dispatcher
 
   val camel = CamelExtension(context.system)
   implicit val camelContext = camel.context
 
-  val queryMessage = CamelMessage(request.config.params("sql"), Map.empty)
+  val queryMessage = CamelMessage(configValueFor("sql"), Map.empty)
 
   //*******************************************************************************************************************
   // State
@@ -105,10 +105,10 @@ class SqlQueryEvent(request: EventSubscriptionRequest) extends Actor with FSM[Sq
   //*******************************************************************************************************************
   startWith(Idle, NoData)
 
-  val sql = request.config.params("sql")
-  val initialDelay = request.config.params.getOrElse("initial-delay", "100").toInt
-  val interval = request.config.params.getOrElse("interval", "300").toInt
-  val sqlTimeout = request.config.params.getOrElse("sql-timeout", "10").toInt
+  val sql = configValueFor("sql")
+  val initialDelay = configValueFor("initial-delay", "100").toInt
+  val interval = configValueFor("interval", "300").toInt
+  val sqlTimeout = configValueFor("sql-timeout", "10").toInt
 
   when(Idle) {
     case Event("tick", _) =>

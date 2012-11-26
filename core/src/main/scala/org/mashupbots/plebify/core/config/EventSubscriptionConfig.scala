@@ -47,7 +47,7 @@ case class EventSubscriptionConfig(
    *
    * Defaults:
    *  - `description` = empty string.
-   *  - `initialization-timeout` = 5 seconds.
+   *  - `initialization-timeout` = 30 seconds.
    *
    * @param jobId Id of the job to which this task belong
    * @param index Index of this event subscription in the List of event subscription for a job
@@ -59,7 +59,7 @@ case class EventSubscriptionConfig(
     config.getString("connector-id"),
     config.getString("connector-event"),
     ConfigUtil.getString(config, "description", ""),
-    ConfigUtil.getInt(config, "initialization-timeout", 5),
+    ConfigUtil.getInt(config, "initialization-timeout", 30),
     ConfigUtil.getParameters(config, List("connector-id", "connector-event", "description", "initialization-timeout")))
 
   /**
