@@ -39,8 +39,11 @@ import scala.util.matching.Regex
  * ==Event Data==
  *  - '''Date''': Timestamp when event occurred
  *  - '''Content''': Contents of the email
- *  - '''ContentLength''': Length of the email
  *  - '''ContentType''': MIME Type set to `text/plain` by default
+ *  - '''SendOn''': Date the email was sent
+ *  - '''From''': Sender's email address
+ *  - '''To''': Receiver's email address
+ *  - '''Subject''': Subject of the email
  *
  * @param request Subscription request
  */
@@ -48,7 +51,7 @@ class MailReceivedEvent(request: EventSubscriptionRequest) extends Consumer with
 
   def endpointUri = request.config.params("uri")
   require(endpointUri.startsWith("imap") || endpointUri.startsWith("pop"), "imap or pop3 needed to receive email")
-  
+
   val contains: Option[List[String]] = {
     val c = request.config.params.get("contains")
     if (c.isEmpty) None
@@ -71,11 +74,19 @@ class MailReceivedEvent(request: EventSubscriptionRequest) extends Consumer with
         }
 
         if (fireEvent) {
+          val httpFields: Map[String, String] = msg.headers
+            .filter { case (key, value) => !key.startsWith("Camel") && value != null }
+            .map { case (key, value) => ("MailField_" + key, value.toString) }
+
           val data = Map(
             (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
             (EventData.Date, EventData.dateTimeToString(new Date())),
             (EventData.Content, content),
-            (EventData.ContentType, "text/plain"))
+            (EventData.ContentType, "text/plain"),
+            ("SendOn", EventData.readCamelHeader(msg, "Date")),
+            ("From", EventData.readCamelHeader(msg, "From")),
+            ("To", EventData.readCamelHeader(msg, "To")),
+            ("Subject", EventData.readCamelHeader(msg, "Subject")))
 
           request.job ! EventNotification(request.config, data)
         } else {

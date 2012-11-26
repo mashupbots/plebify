@@ -15,25 +15,27 @@
 //
 package org.mashupbots.plebify.db
 
+import java.util.ArrayList
+import java.util.Date
+import java.util.HashMap
+
+import scala.collection.JavaConversions._
+import scala.concurrent.duration.DurationInt
+
+import org.apache.camel.Exchange
+import org.mashupbots.plebify.core.EventData
+import org.mashupbots.plebify.core.EventNotification
 import org.mashupbots.plebify.core.EventSubscriptionRequest
-import akka.camel.Producer
+
 import akka.actor.Actor
-import akka.actor.Props
+import akka.actor.FSM
 import akka.actor.PoisonPill
-import scala.concurrent.Future
-import scala.concurrent.duration._
+import akka.actor.Props
+import akka.camel.CamelExtension
+import akka.camel.CamelMessage
 import akka.pattern.ask
 import akka.pattern.pipe
-import akka.actor.FSM
-import akka.camel.CamelMessage
-import org.mashupbots.plebify.core.EventData
-import java.util.Date
-import org.apache.camel.Exchange
-import java.util.ArrayList
-import java.util.HashMap
-import akka.camel.CamelExtension
-import org.mashupbots.plebify.core.EventNotification
-import scala.collection.JavaConversions._
+import akka.util.Timeout.durationToTimeout
 
 /**
  * FSM states for [[org.mashupbots.plebify.db.SqlQueryEvent]]
