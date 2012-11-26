@@ -15,115 +15,67 @@
 //
 package org.mashupbots.plebify.mail
 
-import java.io.File
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
+
+import scala.collection.JavaConversions._
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
+
+import org.mashupbots.plebify.core.ConnectorFactory
 import org.mashupbots.plebify.core.Engine
+import org.mashupbots.plebify.core.EventData
+import org.mashupbots.plebify.core.EventNotification
+import org.mashupbots.plebify.core.EventSubscriptionRequest
+import org.mashupbots.plebify.core.EventSubscriptionResponse
 import org.mashupbots.plebify.core.StartRequest
 import org.mashupbots.plebify.core.StartResponse
+import org.mashupbots.plebify.core.TaskExecutionRequest
+import org.mashupbots.plebify.core.TaskExecutionResponse
+import org.mashupbots.plebify.core.config.ConnectorConfig
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 import org.slf4j.LoggerFactory
+
 import com.typesafe.config.ConfigFactory
+
+import akka.actor.Actor
+import akka.actor.ActorContext
+import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
-import org.mashupbots.plebify.core.ConnectorFactory
-import akka.actor.ActorContext
-import org.mashupbots.plebify.core.config.ConnectorConfig
-import akka.actor.ActorRef
-import akka.actor.Actor
-import org.mashupbots.plebify.core.EventSubscriptionRequest
-import org.mashupbots.plebify.core.EventSubscriptionResponse
-import org.mashupbots.plebify.core.TaskExecutionRequest
-import org.mashupbots.plebify.core.TaskExecutionResponse
-import scala.collection.mutable.ListBuffer
-import org.mashupbots.plebify.core.EventNotification
-import scala.collection.JavaConversions._
-import org.mashupbots.plebify.core.EventData
 
-object MailConnectorSpec {
-
-  val sendReceiveEmail = """
-	send-receive-email {
-      connectors = [{
-          connector-id = "mail"
-          factory-class-name = "org.mashupbots.plebify.mail.MailConnectorFactory"
-          my-smtp-uri = "{send-uri}"
-        },{
-          connector-id = "test"
-          factory-class-name = "org.mashupbots.plebify.mail.MailSpecConnectorFactory"
-        }]
-      jobs = [{
-        job-id = "job-send-email-without-template"
-          on = [{
-              connector-id = "test"
-              connector-event = "event"
-	        }]
-          do = [{
-              connector-id = "mail"
-              connector-task = "send"
-              from = "{send-from}"
-              to = "{send-to}"
-              subject = "send email without template"
-              uri = "lookup:my-smtp-uri"
-	        }]
-        },{
-        job-id = "job-send-email-with-template"
-          on = [{
-              connector-id = "test"
-              connector-event = "event"
-	        }]
-          do = [{
-              connector-id = "mail"
-              connector-task = "send"
-              from = "{send-from}"
-              to = "{send-to}"
-              subject = "send email with template"
-              template = "{{one}} {{two}} {{three}}"
-              uri = "lookup:my-smtp-uri"
-	        }]
-        },{
-          job-id = "job-receive-email"
-          on = [{
-              connector-id = "mail"
-              connector-event = "received"
-              uri = "{receive-uri}&consumer.initialDelay=3000&consumer.delay=2000"
-	        }]
-          do = [{
-              connector-id = "test"
-              connector-task = "task"
-	        }]
-        }]
-	}
-    
-	akka {
-	  event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
-	  loglevel = "DEBUG"
-	}    
-    """
-
-  val mailSettingsFile = Paths.get(System.getProperty("user.home"), "plebify-tests-config.txt")
-
-  val mailSettings: Map[String, String] = Files.readAllLines(mailSettingsFile, Charset.forName("UTF-8"))
-    .filter(s => s.length() > 0 && !s.trim().startsWith("#"))
-    .map(s => {
-      val idx = s.indexOf("=")
-      (s.substring(0, idx).trim(), s.substring(idx + 1).trim())
-    }).toMap
-
-  val cfg = List(sendReceiveEmail).mkString("\n")
-    .replace("{send-from}", mailSettings("mail-send-from"))
-    .replace("{send-to}", mailSettings("mail-send-to"))
-    .replace("{send-uri}", mailSettings("mail-send-uri"))
-    .replace("{receive-uri}", mailSettings("mail-receive-uri"))
-}
-
+/**
+ * Tests for [[org.mashupbots.plebify.mail.MailConnector]]
+ * 
+ * Note that before you run the test, you must create a file called `plebify-tests-config.txt` in your home
+ * directory.
+ * 
+ * The file must contain the following configuration:
+ * 
+ * {{{
+ * # Sender email address. e.g. 'userA@gmail.com'
+ * mail-send-from=
+ * 
+ * # Reciever email address. e.g. 'userB@gmail.com'
+ * mail-send-to=
+ * 
+ * # Camel mail URI for outbound email of userA. 
+ * # E.g. 'smtps://smtp.gmail.com:465?username=userA@gmail.com&password=secretA'
+ * mail-send-uri=
+ * 
+ * # Camel mail URI for inbound email for userB
+ * # E.g. 'imaps://imap.gmail.com:993?username=userB@gmail.com&password=secretB&delete=false&unseen=true'
+ * mail-receive-uri=
+ * }}}
+ * 
+ * Note that userA and userB can be the same email account.
+ * 
+ */
 class MailConnectorSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec
   with MustMatchers with BeforeAndAfterAll {
 
@@ -211,4 +163,85 @@ class MailSpecConnector(connectorConfig: ConnectorConfig) extends Actor with akk
 
   }
 }
+
+/**
+ * Companion class
+ */
+object MailConnectorSpec {
+
+  val sendReceiveEmail = """
+	send-receive-email {
+      connectors = [{
+          connector-id = "mail"
+          factory-class-name = "org.mashupbots.plebify.mail.MailConnectorFactory"
+          my-smtp-uri = "{send-uri}"
+        },{
+          connector-id = "test"
+          factory-class-name = "org.mashupbots.plebify.mail.MailSpecConnectorFactory"
+        }]
+      jobs = [{
+        job-id = "job-send-email-without-template"
+          on = [{
+              connector-id = "test"
+              connector-event = "event"
+	        }]
+          do = [{
+              connector-id = "mail"
+              connector-task = "send"
+              from = "{send-from}"
+              to = "{send-to}"
+              subject = "send email without template"
+              uri = "lookup:my-smtp-uri"
+	        }]
+        },{
+        job-id = "job-send-email-with-template"
+          on = [{
+              connector-id = "test"
+              connector-event = "event"
+	        }]
+          do = [{
+              connector-id = "mail"
+              connector-task = "send"
+              from = "{send-from}"
+              to = "{send-to}"
+              subject = "send email with template"
+              template = "{{one}} {{two}} {{three}}"
+              uri = "lookup:my-smtp-uri"
+	        }]
+        },{
+          job-id = "job-receive-email"
+          on = [{
+              connector-id = "mail"
+              connector-event = "received"
+              uri = "{receive-uri}&consumer.initialDelay=3000&consumer.delay=2000"
+	        }]
+          do = [{
+              connector-id = "test"
+              connector-task = "task"
+	        }]
+        }]
+	}
+    
+	akka {
+	  event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
+	  loglevel = "DEBUG"
+	}    
+    """
+
+  val mailSettingsFile = Paths.get(System.getProperty("user.home"), "plebify-tests-config.txt")
+
+  val mailSettings: Map[String, String] = Files.readAllLines(mailSettingsFile, Charset.forName("UTF-8"))
+    .filter(s => s.length() > 0 && !s.trim().startsWith("#"))
+    .map(s => {
+      val idx = s.indexOf("=")
+      (s.substring(0, idx).trim(), s.substring(idx + 1).trim())
+    }).toMap
+
+  val cfg = List(sendReceiveEmail).mkString("\n")
+    .replace("{send-from}", mailSettings("mail-send-from"))
+    .replace("{send-to}", mailSettings("mail-send-to"))
+    .replace("{send-uri}", mailSettings("mail-send-uri"))
+    .replace("{receive-uri}", mailSettings("mail-receive-uri"))
+}
+
 

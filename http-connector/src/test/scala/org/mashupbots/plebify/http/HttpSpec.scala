@@ -15,8 +15,11 @@
 //
 package org.mashupbots.plebify.http
 
+import scala.Predef.Map.apply
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
+
+import org.apache.camel.Exchange
 import org.apache.commons.httpclient.HttpClient
 import org.apache.commons.httpclient.methods.GetMethod
 import org.apache.commons.httpclient.methods.PostMethod
@@ -28,15 +31,98 @@ import org.scalatest.GivenWhenThen
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 import org.slf4j.LoggerFactory
+
 import com.typesafe.config.ConfigFactory
+
 import akka.actor.ActorSystem
 import akka.actor.Props
+import akka.camel.CamelMessage
 import akka.camel.CamelMessage
 import akka.camel.Consumer
 import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
-import org.apache.camel.Exchange
 
+/**
+ * Test of HTTP requests in [[org.mashupbots.plebify.http.HttpConnector]]
+ */
+class HttpSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec
+  with MustMatchers with GivenWhenThen {
+
+  val log = LoggerFactory.getLogger("HttpSpec")
+  def this() = this(ActorSystem("HttpSpec", ConfigFactory.parseString(HttpSpec.cfg)))
+
+  "Http Connector" must {
+
+    "be able to receive and send an http request" in {
+      val engine = system.actorOf(Props(new Engine(configName = "on-receive-send-request")), "on-receive-send-request")
+      engine ! StartRequest()
+      expectMsgPF(5 seconds) {
+        case m: StartResponse => {
+          m.isSuccess must be(true)
+        }
+      }
+
+      val dummyListener = system.actorOf(Props[DummyHttpListener], "DummyHttpListener")
+      Thread.sleep(2000)
+
+      info("Send POST")
+      val (responseCode1, content1) =
+        HttpSpec.httpPost("http://localhost:8877/on-receive-send-request", "hello", "text/plain")
+      responseCode1 must be(200)
+
+      Thread.sleep(200)
+
+      dummyListener ! "dump"
+      expectMsgPF(1 seconds) {
+        case m: List[_] => {
+          m.size must be(1)
+          val m1 = m(0).asInstanceOf[Map[String, Any]]
+          log.info("M1: {}", m1)
+          m1("Body") must be("hello")
+          m1("Content-Length") must be("5")
+          m1("Content-Type") must be("text/plain")
+        }
+      }
+
+      info("Send GET")
+      val (responseCode2, content2) =
+        HttpSpec.httpGet("http://localhost:8877/on-receive-send-request")
+      responseCode2 must be(200)
+
+      Thread.sleep(200)
+
+      dummyListener ! "dump"
+      expectMsgPF(1 seconds) {
+        case m: List[_] => {
+          m.size must be(2)
+          val m2 = m(1).asInstanceOf[Map[String, Any]]
+          log.info("M2: {}", m2)
+          m2("Content-Length") must be("0")
+        }
+      }
+
+      info("Endpoint has errors, there should be 3 retries 1 second apart")
+      val (responseCode5, content5) =
+        HttpSpec.httpPost("http://localhost:8877/on-receive-send-request", "return error", "text/plain")
+      responseCode5 must be(200)
+
+      Thread.sleep(10000)
+
+      dummyListener ! "dump"
+      expectMsgPF(1 seconds) {
+        case m: List[_] => {
+          log.info("Messages received by our DummyHttpListener {}", m)
+          m.size must be(6) // 2 from previous test, and 4 from this test (1 initial and 3 resends)
+        }
+      }
+    }
+
+  }
+}
+
+/**
+ * Companion object for [[org.mashupbots.plebify.http.HttpSpec]]
+ */
 object HttpSpec {
 
   val onReceiveSendConfig = """
@@ -122,81 +208,9 @@ object HttpSpec {
 
 }
 
-class HttpSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec
-  with MustMatchers with GivenWhenThen {
-
-  val log = LoggerFactory.getLogger("HttpSpec")
-  def this() = this(ActorSystem("HttpSpec", ConfigFactory.parseString(HttpSpec.cfg)))
-
-  "Http Connector" must {
-
-    "be able to receive and send an http request" in {
-      val engine = system.actorOf(Props(new Engine(configName = "on-receive-send-request")), "on-receive-send-request")
-      engine ! StartRequest()
-      expectMsgPF(5 seconds) {
-        case m: StartResponse => {
-          m.isSuccess must be(true)
-        }
-      }
-
-      val dummyListener = system.actorOf(Props[DummyHttpListener], "DummyHttpListener")
-      Thread.sleep(2000)
-
-      info("Send POST")
-      val (responseCode1, content1) =
-        HttpSpec.httpPost("http://localhost:8877/on-receive-send-request", "hello", "text/plain")
-      responseCode1 must be(200)
-
-      Thread.sleep(200)
-
-      dummyListener ! "dump"
-      expectMsgPF(1 seconds) {
-        case m: List[_] => {
-          m.size must be(1)
-          val m1 = m(0).asInstanceOf[Map[String, Any]]
-          log.info("M1: {}", m1)
-          m1("Body") must be("hello")
-          m1("Content-Length") must be("5")
-          m1("Content-Type") must be("text/plain")
-        }
-      }      
-
-      info("Send GET")
-      val (responseCode2, content2) =
-        HttpSpec.httpGet("http://localhost:8877/on-receive-send-request")
-      responseCode2 must be(200)
-
-      Thread.sleep(200)
-
-      dummyListener ! "dump"
-      expectMsgPF(1 seconds) {
-        case m: List[_] => {
-          m.size must be(2)
-          val m2 = m(1).asInstanceOf[Map[String, Any]]
-          log.info("M2: {}", m2)
-          m2("Content-Length") must be("0")          
-        }
-      }
-
-      info("Endpoint has errors, there should be 3 retries 1 second apart")
-      val (responseCode5, content5) =
-        HttpSpec.httpPost("http://localhost:8877/on-receive-send-request", "return error", "text/plain")
-      responseCode5 must be(200)
-      
-      Thread.sleep(10000)
-
-      dummyListener ! "dump"
-      expectMsgPF(1 seconds) {
-        case m: List[_] => {
-          log.info("Messages received by our DummyHttpListener {}", m)
-          m.size must be(6)	// 2 from previous test, and 4 from this test (1 initial and 3 resends)
-        }
-      }
-    }
-        
-  }
-}
-
+/**
+ * HTTP web server used to receive requests from http-connect send-request task
+ */
 class DummyHttpListener extends Consumer {
   def endpointUri = "jetty:http://localhost:9977/dummy-listender"
 
@@ -204,8 +218,8 @@ class DummyHttpListener extends Consumer {
   def receive = {
     case msg: CamelMessage =>
       val body = if (msg.body != null) msg.bodyAs[String] else ""
-      
-        // msg.body is a stream so we don't want to send it back in the "dump".
+
+      // msg.body is a stream so we don't want to send it back in the "dump".
       // we covert the stream to a string
       val data = msg.headers.toMap ++ Map(("Body", body))
       messages += data

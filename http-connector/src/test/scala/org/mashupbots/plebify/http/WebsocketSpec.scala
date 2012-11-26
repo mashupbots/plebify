@@ -15,12 +15,15 @@
 //
 package org.mashupbots.plebify.http
 
+import java.net.URI
+import java.util.concurrent.TimeUnit
+
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
-import org.apache.commons.httpclient.HttpClient
-import org.apache.commons.httpclient.methods.GetMethod
-import org.apache.commons.httpclient.methods.PostMethod
-import org.apache.commons.httpclient.methods.StringRequestEntity
+
+import org.eclipse.jetty.websocket.WebSocket
+import org.eclipse.jetty.websocket.WebSocket.Connection
+import org.eclipse.jetty.websocket.WebSocketClientFactory
 import org.mashupbots.plebify.core.Engine
 import org.mashupbots.plebify.core.StartRequest
 import org.mashupbots.plebify.core.StartResponse
@@ -28,58 +31,18 @@ import org.scalatest.GivenWhenThen
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 import org.slf4j.LoggerFactory
+
 import com.typesafe.config.ConfigFactory
+
 import akka.actor.ActorSystem
 import akka.actor.Props
-import akka.camel.CamelMessage
-import akka.camel.Consumer
+import akka.camel.Producer
 import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
-import org.apache.camel.Exchange
-import org.eclipse.jetty.websocket.WebSocketClientFactory
-import java.net.URI
-import org.eclipse.jetty.websocket.WebSocket
-import java.util.concurrent.TimeUnit
-import org.eclipse.jetty.websocket.WebSocket.Connection
-import akka.camel.Producer
 
-object WebsocketSpec {
-
-  val onReceiveSendConfig = """
-	on-receive-send-frame {
-      connectors = [{
-          connector-id = "http"
-          factory-class-name = "org.mashupbots.plebify.http.HttpConnectorFactory"
-          websocket-server-1 = "websocket://localhost:9999/out"
-        }]
-      jobs = [{
-          job-id = "job1"
-          on = [{
-              connector-id = "http"
-              connector-event = "frame-received"
-              uri = "websocket://localhost:9998/in"
-	        }]
-          do = [{
-              connector-id = "http"
-              connector-task = "send-frame"
-              websocket-server = websocket-server-1
-	        }]
-        }]
-	}
-    
-	akka {
-	  event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
-	  loglevel = "DEBUG"
-	}    
-    """
-
-  lazy val cfg = List(onReceiveSendConfig).mkString("\n")
-
-  val wsFactory = new WebSocketClientFactory()
-  wsFactory.start()
-
-}
-
+/**
+ * Tests of websockets in [[org.mashupbots.plebify.http.HttpConnector]]
+ */
 class WebsocketSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec
   with MustMatchers with GivenWhenThen {
 
@@ -89,6 +52,16 @@ class WebsocketSpec(_system: ActorSystem) extends TestKit(_system) with Implicit
   "Http Connector" must {
 
     "be able to receive and send an websocket frames" in {
+
+      //
+      // source ws client > localhost:9998/in > frame-received > send-frame localhost:9999/out > destination ws client
+      // 
+      // 1. source ws client send data to websocket server localhost:9998/in 
+      // 2. http-connector frame-received consumer receives data from localhost:9998/in
+      // 3. frame-received send event notification to http-connector send-frame running websocket server 
+      //    localhost:9999/out
+      // 4. destination ws client connects to localhost:9999/out and receives the data sent by source client
+      //
       
       info("Start source ws-server on 9998. Text frames will be generated from this server")
       val sourseServer = system.actorOf(Props[MyWebSocketServer], "SourceServer")
@@ -128,6 +101,49 @@ class WebsocketSpec(_system: ActorSystem) extends TestKit(_system) with Implicit
   }
 }
 
+/**
+ * Companion to [[org.mashupbots.plebify.http.WebsocketSpec]]
+ */
+object WebsocketSpec {
+
+  val onReceiveSendConfig = """
+	on-receive-send-frame {
+      connectors = [{
+          connector-id = "http"
+          factory-class-name = "org.mashupbots.plebify.http.HttpConnectorFactory"
+          websocket-server-1 = "websocket://localhost:9999/out"
+        }]
+      jobs = [{
+          job-id = "job1"
+          on = [{
+              connector-id = "http"
+              connector-event = "frame-received"
+              uri = "websocket://localhost:9998/in"
+	        }]
+          do = [{
+              connector-id = "http"
+              connector-task = "send-frame"
+              websocket-server = websocket-server-1
+	        }]
+        }]
+	}
+    
+	akka {
+	  event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
+	  loglevel = "DEBUG"
+	}    
+    """
+
+  lazy val cfg = List(onReceiveSendConfig).mkString("\n")
+
+  val wsFactory = new WebSocketClientFactory()
+  wsFactory.start()
+
+}
+
+/**
+ * Websocket client used in this test case for sending text frames
+ */
 class MyWebSocket(val name: String) extends WebSocket.OnTextMessage {
 
   val log = LoggerFactory.getLogger("MyWebSocket")
@@ -147,6 +163,9 @@ class MyWebSocket(val name: String) extends WebSocket.OnTextMessage {
   }
 }
 
+/**
+ * Websocket server for the http-connector frame-received event to connect
+ */
 class MyWebSocketServer extends Producer {
   def endpointUri = "websocket://localhost:9998/in?sendToAll=true"
 
