@@ -15,18 +15,16 @@
 //
 package org.mashupbots.plebify.http
 
-import org.mashupbots.plebify.core.EventData
-import org.mashupbots.plebify.core.TaskExecutionRequest
-import org.mashupbots.plebify.core.config.TaskExecutionConfig
-import akka.camel.CamelMessage
-import akka.camel.Oneway
-import akka.camel.Producer
 import org.apache.camel.Exchange
-import akka.camel.CamelMessage
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.mashupbots.plebify.core.EventData
 import org.mashupbots.plebify.core.TaskExecutionConfigReader
+import org.mashupbots.plebify.core.TaskExecutionRequest
+import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.mashupbots.plebify.core.config.TaskExecutionConfig
+
+import akka.camel.CamelMessage
+import akka.camel.Producer
+
 /**
  * Sends a HTTP request to the specified end point
  *

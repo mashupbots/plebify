@@ -15,26 +15,13 @@
 //
 package org.mashupbots.plebify.mail
 
-import scala.concurrent.duration.DurationInt
-import scala.util.Failure
-import scala.util.Success
-import org.mashupbots.plebify.core.Connector
-import org.mashupbots.plebify.core.EventSubscriptionRequest
-import org.mashupbots.plebify.core.EventSubscriptionResponse
-import org.mashupbots.plebify.core.EventUnsubscriptionRequest
-import org.mashupbots.plebify.core.TaskExecutionRequest
-import org.mashupbots.plebify.core.TaskExecutionResponse
-import org.mashupbots.plebify.core.config.ConnectorConfig
-import akka.actor.Actor
-import akka.actor.PoisonPill
-import akka.actor.Props
-import akka.camel.CamelMessage
-import akka.pattern.ask
-import akka.util.Timeout.durationToTimeout
-import akka.actor.ActorRef
-import org.mashupbots.plebify.core.StartRequest
-import org.mashupbots.plebify.core.StartResponse
 import org.mashupbots.plebify.core.DefaultConnector
+import org.mashupbots.plebify.core.EventSubscriptionRequest
+import org.mashupbots.plebify.core.TaskExecutionRequest
+import org.mashupbots.plebify.core.config.ConnectorConfig
+
+import akka.actor.ActorRef
+import akka.actor.Props
 
 /**
  * Connector to email

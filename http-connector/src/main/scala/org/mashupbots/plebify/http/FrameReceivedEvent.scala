@@ -16,15 +16,16 @@
 package org.mashupbots.plebify.http
 
 import java.util.Date
-import scala.collection.immutable.List.apply
+
+import org.apache.camel.Exchange
 import org.mashupbots.plebify.core.EventData
 import org.mashupbots.plebify.core.EventNotification
+import org.mashupbots.plebify.core.EventSubscriptionConfigReader
 import org.mashupbots.plebify.core.EventSubscriptionRequest
+import org.mashupbots.plebify.core.config.ConnectorConfig
+
 import akka.camel.CamelMessage
 import akka.camel.Consumer
-import org.apache.camel.Exchange
-import org.mashupbots.plebify.core.EventSubscriptionConfigReader
-import org.mashupbots.plebify.core.config.ConnectorConfig
 
 /**
  * Starts a websocket client and listens for incoming text frames

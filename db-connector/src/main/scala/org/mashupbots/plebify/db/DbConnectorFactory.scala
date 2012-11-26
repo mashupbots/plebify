@@ -16,8 +16,9 @@
 package org.mashupbots.plebify.db
 
 import org.mashupbots.plebify.core.ConnectorFactory
-import akka.actor.ActorContext
 import org.mashupbots.plebify.core.config.ConnectorConfig
+
+import akka.actor.ActorContext
 import akka.actor.ActorRef
 import akka.actor.Props
 

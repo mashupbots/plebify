@@ -77,6 +77,20 @@ object EventData {
   }
 
   /**
+   * Converts data into a string using our our conventions
+   *
+   * @param data Data to convert to string
+   * @returns Our own representation of the data as a string
+   */
+  def convertToString(data: Any): String = {
+    data match {
+      case null => ""
+      case d: Date => dateTimeToString(d)
+      case x => x.toString
+    }
+  }
+
+  /**
    * Returns the MIME type from a file name.
    *
    * This implementation uses <a href="http://docs.oracle.com/javase/6/docs/api/javax/activation/MimetypesFileTypeMap.html">
@@ -103,14 +117,8 @@ object EventData {
    * @returns string value
    */
   def readCamelHeader(msg: CamelMessage, key: String): String = {
-    if (msg.headers.isDefinedAt(key)) {
-      val v = msg.headers(key)
-      v match {
-        case null => ""
-        case d: Date => dateTimeToString(d)
-        case _ => v.toString
-      }
-    } else ""
+    if (msg.headers.isDefinedAt(key)) convertToString(msg.headers(key))
+    else ""
   }
 
   private val templateKeyRegex = new Regex("\\{\\{([\\d\\w]+)\\}\\}")

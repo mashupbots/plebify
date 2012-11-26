@@ -16,13 +16,13 @@
 package org.mashupbots.plebify.mail
 
 import org.mashupbots.plebify.core.EventData
+import org.mashupbots.plebify.core.TaskExecutionConfigReader
 import org.mashupbots.plebify.core.TaskExecutionRequest
+import org.mashupbots.plebify.core.config.ConnectorConfig
 import org.mashupbots.plebify.core.config.TaskExecutionConfig
+
 import akka.camel.CamelMessage
 import akka.camel.Producer
-import org.mashupbots.plebify.core.config.ConnectorConfig
-import org.mashupbots.plebify.core.config.ConfigUtil
-import org.mashupbots.plebify.core.TaskExecutionConfigReader
 
 /**
  * Send email task

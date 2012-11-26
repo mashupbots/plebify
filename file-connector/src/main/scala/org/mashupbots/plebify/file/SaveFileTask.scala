@@ -16,12 +16,13 @@
 package org.mashupbots.plebify.file
 
 import org.mashupbots.plebify.core.EventData
+import org.mashupbots.plebify.core.TaskExecutionConfigReader
 import org.mashupbots.plebify.core.TaskExecutionRequest
+import org.mashupbots.plebify.core.config.ConnectorConfig
 import org.mashupbots.plebify.core.config.TaskExecutionConfig
+
 import akka.camel.CamelMessage
 import akka.camel.Producer
-import org.mashupbots.plebify.core.config.ConnectorConfig
-import org.mashupbots.plebify.core.TaskExecutionConfigReader
 
 /**
  * Save content to file task

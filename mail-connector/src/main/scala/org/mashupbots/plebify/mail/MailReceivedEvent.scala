@@ -16,15 +16,16 @@
 package org.mashupbots.plebify.mail
 
 import java.util.Date
+
+import org.apache.camel.Exchange
 import org.mashupbots.plebify.core.EventData
 import org.mashupbots.plebify.core.EventNotification
+import org.mashupbots.plebify.core.EventSubscriptionConfigReader
 import org.mashupbots.plebify.core.EventSubscriptionRequest
+import org.mashupbots.plebify.core.config.ConnectorConfig
+
 import akka.camel.CamelMessage
 import akka.camel.Consumer
-import org.apache.camel.Exchange
-import scala.util.matching.Regex
-import org.mashupbots.plebify.core.config.ConnectorConfig
-import org.mashupbots.plebify.core.EventSubscriptionConfigReader
 
 /**
  * New email is received

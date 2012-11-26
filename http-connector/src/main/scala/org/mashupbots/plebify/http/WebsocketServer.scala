@@ -15,17 +15,13 @@
 //
 package org.mashupbots.plebify.http
 
+import org.apache.camel.component.websocket.WebsocketConstants
 import org.mashupbots.plebify.core.EventData
 import org.mashupbots.plebify.core.TaskExecutionRequest
-import org.mashupbots.plebify.core.config.TaskExecutionConfig
+
 import akka.camel.CamelMessage
-import akka.camel.Oneway
 import akka.camel.Producer
-import org.apache.camel.Exchange
-import akka.camel.CamelMessage
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import org.apache.camel.component.websocket.WebsocketConstants
+
 /**
  * A websocket server to which clients can subscribe to events.
  * 

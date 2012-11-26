@@ -18,12 +18,17 @@ package org.mashupbots.plebify.db
 import java.util.ArrayList
 import java.util.Date
 import java.util.HashMap
+
 import scala.collection.JavaConversions._
 import scala.concurrent.duration.DurationInt
+
 import org.apache.camel.Exchange
 import org.mashupbots.plebify.core.EventData
 import org.mashupbots.plebify.core.EventNotification
+import org.mashupbots.plebify.core.EventSubscriptionConfigReader
 import org.mashupbots.plebify.core.EventSubscriptionRequest
+import org.mashupbots.plebify.core.config.ConnectorConfig
+
 import akka.actor.Actor
 import akka.actor.FSM
 import akka.actor.PoisonPill
@@ -33,8 +38,6 @@ import akka.camel.CamelMessage
 import akka.pattern.ask
 import akka.pattern.pipe
 import akka.util.Timeout.durationToTimeout
-import org.mashupbots.plebify.core.config.ConnectorConfig
-import org.mashupbots.plebify.core.EventSubscriptionConfigReader
 
 /**
  * FSM states for [[org.mashupbots.plebify.db.SqlQueryEvent]]
@@ -64,7 +67,8 @@ trait SqlQueryEventData
  *
  * ==Event Data==
  *  - '''Date''': Timestamp when event occurred
- *  - '''Content''': Contents of the email
+ *  - '''Content''': Rows found in text format
+ *  - '''row1-cname''': Value for row `#1` column `cname`.
  *
  * @param connectorConfig Connector configuration.
  * @param request Subscription request
@@ -134,7 +138,8 @@ class SqlQueryEvent(val connectorConfig: ConnectorConfig, val request: EventSubs
           i <- 1 to rows.size
           row = rows(i - 1)
           column <- row.keys
-        } yield (s"row$i-$column", row(column).toString))
+          key = s"row$i-${column.replace(" ", "")}"
+        } yield (key, EventData.convertToString(row(column))))
 
         val data: Map[String, String] = Map(
           (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
@@ -144,7 +149,6 @@ class SqlQueryEvent(val connectorConfig: ConnectorConfig, val request: EventSubs
 
         request.job ! EventNotification(request.config, data)
       }
-
       goto(Idle)
     case Event(msg: akka.actor.Status.Failure, _) => {
       log.error(msg.cause, s"Error running sql for '${request.config.jobId}-${request.config.index}'")

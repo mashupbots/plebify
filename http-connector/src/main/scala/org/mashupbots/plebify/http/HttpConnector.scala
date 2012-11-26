@@ -17,12 +17,13 @@ package org.mashupbots.plebify.http
 
 import org.mashupbots.plebify.core.DefaultConnector
 import org.mashupbots.plebify.core.EventSubscriptionRequest
-import org.mashupbots.plebify.core.TaskExecutionRequest
-import org.mashupbots.plebify.core.config.ConnectorConfig
-import akka.actor.ActorRef
-import akka.actor.Props
 import org.mashupbots.plebify.core.StartRequest
 import org.mashupbots.plebify.core.StartResponse
+import org.mashupbots.plebify.core.TaskExecutionRequest
+import org.mashupbots.plebify.core.config.ConnectorConfig
+
+import akka.actor.ActorRef
+import akka.actor.Props
 
 /**
  * Connector for HTTP events and tasks
