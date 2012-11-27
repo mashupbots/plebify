@@ -16,7 +16,6 @@
 package org.mashupbots.plebify.db
 
 import java.util.Properties
-
 import org.apache.camel.impl.JndiRegistry
 import org.apache.commons.dbcp.DriverManagerConnectionFactory
 import org.apache.commons.dbcp.PoolableConnectionFactory
@@ -29,10 +28,10 @@ import org.mashupbots.plebify.core.StartResponse
 import org.mashupbots.plebify.core.StartResponse.apply
 import org.mashupbots.plebify.core.TaskExecutionRequest
 import org.mashupbots.plebify.core.config.ConnectorConfig
-
 import akka.actor.ActorRef
 import akka.actor.Props
 import akka.camel.CamelExtension
+import org.apache.camel.impl.PropertyPlaceholderDelegateRegistry
 
 /**
  * Connector to databases
@@ -66,11 +65,19 @@ class DbConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
 
     try {
       val camel = CamelExtension(context.system)
-      val registry = camel.context.getRegistry().asInstanceOf[JndiRegistry]
+      val registry: JndiRegistry = {
+        camel.context.getRegistry() match {
+          case r: JndiRegistry => r
+          case p: PropertyPlaceholderDelegateRegistry => p.getRegistry().asInstanceOf[JndiRegistry]
+          case unknown => throw new Error(s"Unsupported camel registry type: ${unknown.getClass.getName}")
+        }
+      }
 
       // See http://svn.apache.org/repos/asf/commons/proper/dbcp/branches/TEST_DBCP_1_3_BRANCH/doc/ManualPoolingDataSourceExample.java
       val dataSourceNames = DbConnector.extractDatasourceNames(connectorConfig)
       dataSourceNames.foreach(dataSourceName => {
+
+        log.debug("Creating datasource '{}'", dataSourceName)
 
         // Load underlying JDBC driver
         Class.forName(connectorConfig.params(s"${dataSourceName}-datasource-driver"))
@@ -132,7 +139,8 @@ class DbConnector(connectorConfig: ConnectorConfig) extends DefaultConnector {
 
       StartResponse()
     } catch {
-      case e: Throwable => StartResponse(Some(e))
+      case e: Throwable =>
+        StartResponse(Some(e))
     }
 
   }

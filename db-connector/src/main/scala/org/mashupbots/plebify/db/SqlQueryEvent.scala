@@ -18,17 +18,14 @@ package org.mashupbots.plebify.db
 import java.util.ArrayList
 import java.util.Date
 import java.util.HashMap
-
 import scala.collection.JavaConversions._
 import scala.concurrent.duration.DurationInt
-
 import org.apache.camel.Exchange
 import org.mashupbots.plebify.core.EventData
 import org.mashupbots.plebify.core.EventNotification
 import org.mashupbots.plebify.core.EventSubscriptionConfigReader
 import org.mashupbots.plebify.core.EventSubscriptionRequest
 import org.mashupbots.plebify.core.config.ConnectorConfig
-
 import akka.actor.Actor
 import akka.actor.FSM
 import akka.actor.PoisonPill
@@ -38,6 +35,7 @@ import akka.camel.CamelMessage
 import akka.pattern.ask
 import akka.pattern.pipe
 import akka.util.Timeout.durationToTimeout
+import java.util.UUID
 
 /**
  * FSM states for [[org.mashupbots.plebify.db.SqlQueryEvent]]
@@ -63,7 +61,7 @@ trait SqlQueryEventData
  *  - '''max-rows''': Optional maximum number of rows to be returned in a query. Defaults to `100` if not supplied.
  *  - '''initial-delay''': Optional number of seconds before polling is started. Defaults to `60` seconds.
  *  - '''interval''': Optional number of seconds between polling for the database. Defaults to `300` seconds.
- *  - '''sql-timeout''': Optional number of seconds to wait for query to return. Defaults to `10` seconds.
+ *  - '''sql-timeout''': Optional number of seconds to wait for query to return. Defaults to `30` seconds.
  *
  * ==Event Data==
  *  - '''Date''': Timestamp when event occurred
@@ -112,7 +110,7 @@ class SqlQueryEvent(val connectorConfig: ConnectorConfig, val request: EventSubs
   val sql = configValueFor("sql")
   val initialDelay = configValueFor("initial-delay", "100").toInt
   val interval = configValueFor("interval", "300").toInt
-  val sqlTimeout = configValueFor("sql-timeout", "10").toInt
+  val sqlTimeout = configValueFor("sql-timeout", "30").toInt
 
   when(Idle) {
     case Event("tick", _) =>
@@ -132,17 +130,16 @@ class SqlQueryEvent(val connectorConfig: ConnectorConfig, val request: EventSubs
 
       val rowCount = msg.headers("CamelJdbcRowCount").asInstanceOf[Int]
       if (rowCount > 0) {
-        val javaRows = msg.bodyAs[ArrayList[HashMap[String, Object]]]
-        val rows = javaRows.toList
+        val rows = msg.bodyAs[ArrayList[HashMap[String, Object]]].toList
         val sqlResult = (for {
           i <- 1 to rows.size
           row = rows(i - 1)
           column <- row.keys
-          key = s"row$i-${column.replace(" ", "")}"
+          key = s"row$i-${column.replaceAll("\\s", "")}"
         } yield (key, EventData.convertToString(row(column))))
 
         val data: Map[String, String] = Map(
-          (EventData.Id, EventData.readCamelHeader(msg, Exchange.BREADCRUMB_ID)),
+          (EventData.Id, UUID.randomUUID.toString),
           (EventData.Date, EventData.dateTimeToString(new Date())),
           (EventData.Content, sqlResult.mkString("\n")),
           (EventData.ContentType, "text/plain")) ++ sqlResult.toMap
@@ -169,7 +166,7 @@ class SqlQueryEvent(val connectorConfig: ConnectorConfig, val request: EventSubs
   }
 
   override def preStart() {
-    val worker = context.actorOf(Props(new SqlQueryEventWorker(request)), "worker")
+    val worker = context.actorOf(Props(new SqlQueryEventWorker(connectorConfig, request)), "worker")
     context.system.scheduler.schedule(initialDelay seconds, interval seconds, self, "tick")
   }
 

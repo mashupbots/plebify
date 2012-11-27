@@ -35,14 +35,14 @@ import akka.util.Timeout.durationToTimeout
 trait Connector {
 
   /**
-   * Creates a unique actor name for a given event subscription
+   * Creates a unique actor name for a given event subscription of a job
    */
   def createActorName(config: EventSubscriptionConfig): String = {
     s"${config.connectorId}-${config.connectorEvent}-${config.jobId}-${config.index}"
   }
 
   /**
-   * Creates a unique actor name for a given task
+   * Creates a unique actor name for a given task of a job
    */
   def createActorName(config: TaskExecutionConfig): String = {
     s"${config.connectorId}-${config.connectorTask}-${config.jobId}-${config.index}"
@@ -53,7 +53,9 @@ trait Connector {
 /**
  * Default connector
  *
- * Connector that instances child actors to process event subscription and task executions
+ * Connector that instances child actors to process event subscription and task executions. For each event and task in
+ * a job, a event/task actor is instanced.
+ * 
  */
 trait DefaultConnector extends Actor with akka.actor.ActorLogging with Connector {
 

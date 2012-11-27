@@ -16,22 +16,23 @@
 package org.mashupbots.plebify.db
 
 import org.mashupbots.plebify.core.EventSubscriptionRequest
-
 import akka.camel.Producer
+import org.mashupbots.plebify.core.EventSubscriptionConfigReader
+import org.mashupbots.plebify.core.config.ConnectorConfig
 
 /**
  * Performs the running of the query for [[org.mashupbots.plebify.db.SqlQueryEvent]].
- * 
+ *
  * See [[org.mashupbots.plebify.db.SqlQueryEvent]] for description of parameters
  *
+ * @param connectorConfig Connector configuration.
  * @param request Subscription request
  */
-class SqlQueryEventWorker(request: EventSubscriptionRequest) extends Producer with akka.actor.ActorLogging {
+class SqlQueryEventWorker(val connectorConfig: ConnectorConfig, val request: EventSubscriptionRequest)
+  extends Producer with EventSubscriptionConfigReader with akka.actor.ActorLogging {
 
-  val sqlTemplate = request.config.params("sql")
-  val pollPeriod = request.config.params.getOrElse("poll-period", "300").toInt
-  val maxRows = request.config.params.getOrElse("max-rows", "100")
-  val datasource = request.config.params("datasource")
+  val maxRows = configValueFor("max-rows", "100")
+  val datasource = configValueFor("datasource")
 
-  def endpointUri: String = request.config.params(s"jdbc:${datasource}?readSize=${maxRows}")
+  def endpointUri: String = s"jdbc:${datasource}?readSize=${maxRows}"
 }

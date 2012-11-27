@@ -16,10 +16,11 @@
 package org.mashupbots.plebify.core.config
 
 import java.io.File
-
 import scala.collection.JavaConversions._
-
 import com.typesafe.config.Config
+import java.nio.file.Paths
+import java.nio.file.Files
+import java.nio.charset.Charset
 
 /**
  * A utility class for reading AKKA configuration
@@ -164,6 +165,44 @@ object ConfigUtil {
     } catch {
       case e: Throwable => Nil
     }
+  }
+
+  /**
+   * Reads a name value pair text file for our test cases
+   * 
+   * @param path Directory of file
+   * @param file File Name
+   * @return Map of name-value pairs
+   */
+  def parseNameValueTextFile(path: String, fileName: String = "plebify-tests-config.txt"): Map[String, String] = {
+    val file = Paths.get(path, fileName)
+
+    val settings: Map[String, String] = Files.readAllLines(file, Charset.forName("UTF-8"))
+      .filter(s => s.length() > 0 && !s.trim().startsWith("#"))
+      .map(s => {
+        val idx = s.indexOf("=")
+        (s.substring(0, idx).trim(), s.substring(idx + 1).trim())
+      }).toMap
+
+    settings
+  }
+
+  /**
+   * Merge the contents of a name value text file with a template
+   *
+   * @param template Template with placeholders like `{key}`
+   * @param path Directory of file
+   * @param file File Name
+   * @return Template merged with data form the text file
+   */
+  def mergeNameValueTextFile(template: String, path: String, fileName: String = "plebify-tests-config.txt"): String = {
+    val settings = parseNameValueTextFile(path, fileName)
+
+    settings.foldLeft(template)((t, entry) => {
+      val key = entry._1
+      val value = entry._2
+      t.replace("{" + key + "}", value)
+    })
   }
 
 }

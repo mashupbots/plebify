@@ -40,8 +40,8 @@ trait EngineData
 
 /**
  * The plebify engine manages connectors and jobs for you.
- * 
- * The engine uses immutable configuration. If you wish to change any configuration, you will have to stop and 
+ *
+ * The engine uses immutable configuration. If you wish to change any configuration, you will have to stop and
  * restart the engine.
  *
  * == Starting ==
@@ -162,7 +162,8 @@ class Engine(val configName: String = "plebify") extends Actor
     case Event(msg: Seq[_], data: InitializationData) =>
       val errors = filterErrors(msg)
       if (errors.size > 0) {
-        stop(FSM.Failure(new Error("Error starting one or more connectors.")))
+        errors.foreach(r => log.error(r.error.get, "Error starting engine."))
+        stop(FSM.Failure(new Error("Error starting one or more connectors. Check logs for details.")))
       } else {
         self ! InitializeJob()
         goto(InitializingJobs)

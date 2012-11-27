@@ -18,11 +18,9 @@ package org.mashupbots.plebify.mail
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Paths
-
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
-
 import org.mashupbots.plebify.core.ConnectorFactory
 import org.mashupbots.plebify.core.Engine
 import org.mashupbots.plebify.core.EventData
@@ -38,9 +36,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 import org.slf4j.LoggerFactory
-
 import com.typesafe.config.ConfigFactory
-
 import akka.actor.Actor
 import akka.actor.ActorContext
 import akka.actor.ActorRef
@@ -48,33 +44,34 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
+import org.mashupbots.plebify.core.config.ConfigUtil
 
 /**
  * Tests for [[org.mashupbots.plebify.mail.MailConnector]]
- * 
+ *
  * Note that before you run the test, you must create a file called `plebify-tests-config.txt` in your home
  * directory.
- * 
+ *
  * The file must contain the following configuration:
- * 
+ *
  * {{{
  * # Sender email address. e.g. 'userA@gmail.com'
  * mail-send-from=
- * 
+ *
  * # Reciever email address. e.g. 'userB@gmail.com'
  * mail-send-to=
- * 
- * # Camel mail URI for outbound email of userA. 
+ *
+ * # Camel mail URI for outbound email of userA.
  * # E.g. 'smtps://smtp.gmail.com:465?username=userA@gmail.com&password=secretA'
  * mail-send-uri=
- * 
+ *
  * # Camel mail URI for inbound email for userB
  * # E.g. 'imaps://imap.gmail.com:993?username=userB@gmail.com&password=secretB&delete=false&unseen=true'
  * mail-receive-uri=
  * }}}
- * 
+ *
  * Note that userA and userB can be the same email account.
- * 
+ *
  */
 class MailConnectorSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec
   with MustMatchers with BeforeAndAfterAll {
@@ -103,14 +100,14 @@ class MailConnectorSpec(_system: ActorSystem) extends TestKit(_system) with Impl
       expectMsgPF(5 seconds) {
         case m: List[_] => {
           // There may be > 2 emails downloaded if the mail box is full of other mail
-          m.size must be >=(2)
-          
+          m.size must be >= (2)
+
           // Check that we have the 2 emails that we expect
           val rList = m.asInstanceOf[List[TaskExecutionRequest]]
-          rList.exists(r => r.eventNotification.data("Subject") == "send email with template") must be (true)
-          rList.exists(r => r.eventNotification.data(EventData.Content).contains("1 2 3")) must be (true)
-          rList.exists(r => r.eventNotification.data("Subject") == "send email without template") must be (true)
-          rList.exists(r => r.eventNotification.data(EventData.Content).contains("this is some data to send")) must be (true)
+          rList.exists(r => r.eventNotification.data("Subject") == "send email with template") must be(true)
+          rList.exists(r => r.eventNotification.data(EventData.Content).contains("1 2 3")) must be(true)
+          rList.exists(r => r.eventNotification.data("Subject") == "send email without template") must be(true)
+          rList.exists(r => r.eventNotification.data(EventData.Content).contains("this is some data to send")) must be(true)
         }
       }
 
@@ -228,20 +225,9 @@ object MailConnectorSpec {
 	}    
     """
 
-  val mailSettingsFile = Paths.get(System.getProperty("user.home"), "plebify-tests-config.txt")
+  val template = List(sendReceiveEmail).mkString("\n")
+  val cfg = ConfigUtil.mergeNameValueTextFile(template, System.getProperty("user.home"))
 
-  val mailSettings: Map[String, String] = Files.readAllLines(mailSettingsFile, Charset.forName("UTF-8"))
-    .filter(s => s.length() > 0 && !s.trim().startsWith("#"))
-    .map(s => {
-      val idx = s.indexOf("=")
-      (s.substring(0, idx).trim(), s.substring(idx + 1).trim())
-    }).toMap
-
-  val cfg = List(sendReceiveEmail).mkString("\n")
-    .replace("{send-from}", mailSettings("mail-send-from"))
-    .replace("{send-to}", mailSettings("mail-send-to"))
-    .replace("{send-uri}", mailSettings("mail-send-uri"))
-    .replace("{receive-uri}", mailSettings("mail-receive-uri"))
 }
 
 

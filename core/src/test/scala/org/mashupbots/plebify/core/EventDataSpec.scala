@@ -52,9 +52,9 @@ class EventDataSpec extends WordSpec with ShouldMatchers with GivenWhenThen with
     val data = Map(
       ("one", "1"),
       ("two", "2"),
-      ("three", "3"))
+      ("t-h_r$e^e&", "3"))
 
-    val template = "start {{one}} {{two}} middle {{three}} {{four}} end"
+    val template = "start {{one}} {{two}} middle {{t-h_r$e^e&}} {{four}} end"
 
     EventData.mergeTemplate(template, data) should be("start 1 2 middle 3 {{four}} end")
   }

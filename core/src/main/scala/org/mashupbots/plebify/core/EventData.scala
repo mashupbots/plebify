@@ -121,13 +121,13 @@ object EventData {
     else ""
   }
 
-  private val templateKeyRegex = new Regex("\\{\\{([\\d\\w]+)\\}\\}")
+  private val templateKeyRegex = new Regex("\\{\\{([^\\s]+)\\}\\}")
 
   /**
    * Merge data with a template
    *
    * This is a very simple implementation. It finds `{{key}}` and replace it with the value of the `key` found in
-   * `data`.
+   * `data`. Key can be any character except a white space.
    *
    * @param template template
    * @param data data to merge with the template

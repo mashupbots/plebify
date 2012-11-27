@@ -30,7 +30,6 @@ import akka.camel.Producer
  * ==Parameters==
  *  - '''datasource''': Name of datasource as specified in the connector config
  *  - '''sql''': SQL statement to execute
- *  - '''max-rows''': Optional maximum number of rows to be returned if this is a query query.
  *    Defaults to `0` if not supplied.
  *
  * ==Event Data==
@@ -42,11 +41,11 @@ import akka.camel.Producer
 class ExecuteSqlTask(val connectorConfig: ConnectorConfig, val taskConfig: TaskExecutionConfig) extends Producer
   with TaskExecutionConfigReader with akka.actor.ActorLogging {
 
-  val sqlTemplate = configValueFor("sql")
   val datasource = configValueFor("datasource")
-  val maxRows = configValueFor("max-rows", "100")
 
-  def endpointUri: String = configValueFor(s"jdbc:${datasource}?readSize=${maxRows}")
+  val sqlTemplate = configValueFor("sql")
+
+  def endpointUri = s"jdbc:${datasource}"
 
   /**
    * Transforms [[org.mashupbots.plebify.core.TaskExecutionRequest]] into a CamelMessage
@@ -54,7 +53,8 @@ class ExecuteSqlTask(val connectorConfig: ConnectorConfig, val taskConfig: TaskE
   override def transformOutgoingMessage(msg: Any) = msg match {
     case msg: TaskExecutionRequest => {
 
-      val sqlStatement = sqlTemplate.replace("{{content}}", msg.eventNotification.data(EventData.Content))
+      val sqlStatement = EventData.mergeTemplate(sqlTemplate, msg.eventNotification.data)
+      log.debug("SQL Statement: {}", sqlStatement)
       CamelMessage(sqlStatement, Map.empty)
     }
   }
