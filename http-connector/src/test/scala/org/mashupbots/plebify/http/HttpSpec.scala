@@ -15,7 +15,6 @@
 //
 package org.mashupbots.plebify.http
 
-import scala.Predef.Map.apply
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
 

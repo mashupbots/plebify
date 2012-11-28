@@ -8,20 +8,25 @@ import com.typesafe.sbteclipse.plugin.EclipsePlugin._
 import sbt.Project.Initialize
 import sbtassembly.Plugin._
 import AssemblyKeys._
-
+import akka.sbt.AkkaKernelPlugin
+import akka.sbt.AkkaKernelPlugin.{ Dist, outputDirectory, distJvmOptions, distMainClass }
+ 
 //
 // Build setup
 //
 object SockoBuild extends Build {
 
+  val plebifyVersion = "0.1.0"
+
   //
   // Settings
   //
   lazy val defaultSettings = Defaults.defaultSettings ++ Seq(
-    // Info
+    // Build
     organization := "org.mashupbots.plebify",
-    version      := "0.1.0",
+    version      := plebifyVersion,
     scalaVersion := "2.10.0-RC2",
+    organizationHomepage := Some(url("https://github.com/mashupbots/plebify")),
 
     // Repositories
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
@@ -29,19 +34,32 @@ object SockoBuild extends Build {
     // Compile options
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-optimize", "-feature", "-language:postfixOps"),
     javacOptions  ++= Seq("-Xlint:unchecked", "-Xlint:deprecation"),
-    
-    // sbtEclipse - see examples https://github.com/typesafehub/sbteclipse/blob/master/sbteclipse-plugin/src/sbt-test/sbteclipse/02-contents/project/Build.scala
+
+    //
+    // Generate eclipse project files using sbteclipse-plugin
+    // https://github.com/typesafehub/sbteclipse/blob/master/sbteclipse-plugin/src/sbt-test/sbteclipse/02-contents/project/Build.scala
+    //
     EclipseKeys.createSrc := EclipseCreateSrc.ValueSet(EclipseCreateSrc.Unmanaged, EclipseCreateSrc.Source, EclipseCreateSrc.Resource),
     EclipseKeys.withSource := true    
   )
-    
+
   //
-  // Packaging to SonaType using SBT
+  // Dont' generate eclipse files
+  // 
+  lazy val doNotGenerateEclipseFiles = Seq(EclipseKeys.skipProject := true)
+
+  //
+  // Don't publish this project to maven    
+  //
+  lazy val doNotPublishSettings = Seq(publish := {}, publishLocal := {})
+
+  //
+  // Packaging to SonaType using xsbt-gpg-plugin
   //
   // https://github.com/sbt/sbt.github.com/blob/gen-master/src/jekyll/using_sonatype.md
   // http://www.cakesolutions.net/teamblogs/2012/01/28/publishing-sbt-projects-to-nexus/
   // https://docs.sonatype.org/display/Repository/How+To+Generate+PGP+Signatures+With+Maven
-  // s
+  // 
   def plebifyPomExtra = {
     <url>http://www.plebify.com</url>
     <licenses>
@@ -74,69 +92,100 @@ object SockoBuild extends Build {
       }
     }
   }
-    
-  lazy val doNotPublishSettings = Seq(publish := {}, publishLocal := {})
 
   //
   // Projects
   //
-  lazy val root = Project(id = "plebify",
-                          base = file("."),
-                          settings = defaultSettings) aggregate(core, 
-                            httpConnector, fileConnector, 
-                            mailConnector, dbConnector)
+  lazy val root = Project(
+    id = "plebify",
+    base = file("."),
+    settings = defaultSettings
+  ) aggregate (
+    core,
+    httpConnector, fileConnector, 
+    mailConnector, dbConnector,
+    kernel
+  )
 
-  lazy val core = Project(id = "plebify-core",
-                         base = file("core"),
-                         settings = defaultSettings ++ Seq(
-                           description := "The Plebify engine",
-                           libraryDependencies ++= Dependencies.core,
-                           publishTo <<= plebifyPublishTo,
-                           publishMavenStyle := true,
-                           publishArtifact in Test := false,
-                           pomIncludeRepository := { x => false },
-                           pomExtra := plebifyPomExtra
-                         ))
+  lazy val core = Project(
+    id = "plebify-core",
+    base = file("core"),
+    settings = defaultSettings ++ 
+      Seq(
+        description := "The Plebify engine",
+        libraryDependencies ++= Dependencies.core,
+        publishTo <<= plebifyPublishTo,
+        publishMavenStyle := true,
+        publishArtifact in Test := false,
+        pomIncludeRepository := { x => false },
+        pomExtra := plebifyPomExtra
+      )
+  )
                          
-  lazy val httpConnector = Project(id = "plebify-http-connector",
-                         base = file("http-connector"),
-                         dependencies = Seq(core),
-                         settings = defaultSettings ++ Seq(
-                           description := "HTTP events and actions",
-                           libraryDependencies ++= Dependencies.httpConnector
-                         ))  
+  lazy val httpConnector = Project(
+    id = "plebify-http-connector",
+    base = file("http-connector"),
+    dependencies = Seq(core),
+    settings = defaultSettings ++ 
+      AkkaKernelPlugin.distSettings ++ 
+      doNotGenerateEclipseFiles ++ 
+      Seq(
+        description := "HTTP events and actions",
+        libraryDependencies ++= Dependencies.httpConnector
+      )
+  )  
 
-  lazy val fileConnector = Project(id = "plebify-file-connector",
-                         base = file("file-connector"),
-                         dependencies = Seq(core),
-                         settings = defaultSettings ++ Seq(
-                           description := "File system events and actions",
-                           libraryDependencies ++= Dependencies.fileConnector
-                         ))  
+  lazy val fileConnector = Project(
+    id = "plebify-file-connector",
+    base = file("file-connector"),
+    dependencies = Seq(core),
+    settings = defaultSettings ++ 
+      Seq(
+        description := "File system events and actions",
+        libraryDependencies ++= Dependencies.fileConnector
+      )
+  )  
 
-  lazy val mailConnector = Project(id = "plebify-mail-connector",
-                         base = file("mail-connector"),
-                         dependencies = Seq(core),
-                         settings = defaultSettings ++ Seq(
-                           description := "Email events and actions",
-                           libraryDependencies ++= Dependencies.mailConnector
-                         ))  
+  lazy val mailConnector = Project(
+    id = "plebify-mail-connector",
+    base = file("mail-connector"),
+    dependencies = Seq(core),
+    settings = defaultSettings ++ 
+      Seq(
+        description := "Email events and actions",
+        libraryDependencies ++= Dependencies.mailConnector
+      )
+  )  
 
-  lazy val dbConnector = Project(id = "plebify-db-connector",
-                         base = file("db-connector"),
-                         dependencies = Seq(core),
-                         settings = defaultSettings ++ Seq(
-                           description := "Database events and actions",
-                           libraryDependencies ++= Dependencies.dbConnector
-                         ))  
+  lazy val dbConnector = Project(
+    id = "plebify-db-connector",
+    base = file("db-connector"),
+    dependencies = Seq(core),
+    settings = defaultSettings ++ 
+      Seq(
+        description := "Database events and actions",
+        libraryDependencies ++= Dependencies.dbConnector
+      )
+  )  
 
-  lazy val examples = Project(id = "plebify-examples",
-                         base = file("examples"),
-                         dependencies = Seq(core, httpConnector, fileConnector),
-                         settings = defaultSettings ++ doNotPublishSettings ++ Seq(
-                           description := "Examples",
-                           libraryDependencies ++= Dependencies.examples
-                         ))  
+  lazy val kernel = Project(
+    id = "plebify-kernel",
+    base = file("kernel"),
+    dependencies = Seq(
+      core,
+      httpConnector, fileConnector, 
+      mailConnector, dbConnector
+    ),
+    settings = defaultSettings ++ 
+      AkkaKernelPlugin.distSettings ++ 
+      Seq(
+        description := "Database events and actions",
+        libraryDependencies ++= Dependencies.kernel,
+        distJvmOptions in Dist := "-Xms256M -Xmx1024M",
+        outputDirectory in Dist := file("target/plebify-" + plebifyVersion),
+        distMainClass in Dist := "akka.kernel.Main org.mashupbots.plebify.kernel.PlebifyKernel"
+      )
+  )  
 
 }
 
@@ -148,45 +197,53 @@ object Dependencies {
 
   val core = Seq(
     Dependency.akkaActor, Dependency.akkaCamel, Dependency.akkaSlf4j, Dependency.akkaTestKit,
-    Dependency.logback, Dependency.scalatest
+    Dependency.logback, Dependency.scalatest, Dependency.akkaKernel
   )
   
   val httpConnector = Seq(
     Dependency.camelJetty, Dependency.camelWebSocket, Dependency.logback, Dependency.scalatest, 
-    Dependency.akkaTestKit
+    Dependency.akkaTestKit, Dependency.akkaKernel
   )
 
   val fileConnector = Seq(
-    Dependency.logback, Dependency.scalatest, Dependency.akkaTestKit
+    Dependency.logback, Dependency.scalatest, Dependency.akkaTestKit, Dependency.akkaKernel
   )
 
   val mailConnector = Seq(
-    Dependency.camelMail, Dependency.logback, Dependency.scalatest, Dependency.akkaTestKit
+    Dependency.camelMail, Dependency.logback, Dependency.scalatest, Dependency.akkaTestKit, Dependency.akkaKernel
   )
 
   val dbConnector = Seq(
     Dependency.camelJDBC, Dependency.mysql, Dependency.postgresql, Dependency.commonsDbcp,
-    Dependency.logback, Dependency.scalatest, Dependency.akkaTestKit
+    Dependency.logback, Dependency.scalatest, Dependency.akkaTestKit, Dependency.akkaKernel
   )
 
-  val examples = Seq(
-    Dependency.logback
+  val kernel = Seq(
+    Dependency.akkaKernel, Dependency.akkaSlf4j, Dependency.logback
   )  
 }
 
 object Dependency {
-  val akkaActor      = "com.typesafe.akka" %% "akka-actor"        % "2.1.0-RC2" cross CrossVersion.full
-  val akkaCamel      = "com.typesafe.akka" %% "akka-camel"        % "2.1.0-RC2" cross CrossVersion.full
-  val akkaSlf4j      = "com.typesafe.akka" %% "akka-slf4j"        % "2.1.0-RC2" cross CrossVersion.full
-  val akkaTestKit    = "com.typesafe.akka" %% "akka-testkit"      % "2.1.0-RC2"     % "test" cross CrossVersion.full
-  val logback        = "ch.qos.logback"    % "logback-classic"    % "1.0.3"         % "runtime"
-  val scalatest      = "org.scalatest"     %% "scalatest"         % "2.0.M4"        % "test" cross CrossVersion.full
+  object V {
+    // Dont' forget to change the akka version in plugins.sbt too!
+    val Akka         = "2.1.0-RC2"
 
-  // Akka 2.1 uses camel 2.10
-  val camelJetty     = "org.apache.camel"  % "camel-jetty"        % "2.10.0"
-  val camelWebSocket = "org.apache.camel"  % "camel-websocket"    % "2.10.0"
-  val camelMail      = "org.apache.camel"  % "camel-mail"         % "2.10.0"
-  val camelJDBC      = "org.apache.camel"  % "camel-jdbc"         % "2.10.0"
+    // Akka 2.1 uses camel 2.10
+    val Camel        =  "2.10.0"
+  }
+
+  val akkaKernel     = "com.typesafe.akka" %% "akka-kernel"       % V.Akka cross CrossVersion.full  
+  val akkaActor      = "com.typesafe.akka" %% "akka-actor"        % V.Akka cross CrossVersion.full
+  val akkaCamel      = "com.typesafe.akka" %% "akka-camel"        % V.Akka cross CrossVersion.full
+  val akkaSlf4j      = "com.typesafe.akka" %% "akka-slf4j"        % V.Akka cross CrossVersion.full
+  val akkaTestKit    = "com.typesafe.akka" %% "akka-testkit"      % V.Akka     % "test" cross CrossVersion.full
+  val logback        = "ch.qos.logback"    % "logback-classic"    % "1.0.3"
+  val scalatest      = "org.scalatest"     %% "scalatest"         % "2.0.M4"   % "test" cross CrossVersion.full
+  
+  val camelJetty     = "org.apache.camel"  % "camel-jetty"        % V.Camel
+  val camelWebSocket = "org.apache.camel"  % "camel-websocket"    % V.Camel
+  val camelMail      = "org.apache.camel"  % "camel-mail"         % V.Camel
+  val camelJDBC      = "org.apache.camel"  % "camel-jdbc"         % V.Camel
 
   // Extras for database dependencies
   val commonsDbcp    = "commons-dbcp"      % "commons-dbcp"            % "1.4"
