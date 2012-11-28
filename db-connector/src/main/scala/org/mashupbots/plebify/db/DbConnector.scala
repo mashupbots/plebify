@@ -34,7 +34,20 @@ import akka.camel.CamelExtension
 import org.apache.camel.impl.PropertyPlaceholderDelegateRegistry
 
 /**
- * Connector to databases
+ * Connector to databases.
+ *
+ * For this connector to work, you need to add the following in a `jndi.properties` file in your class path otherwise
+ * you will get an javax.naming.NoInitialContextException.
+ *
+ * {{{
+ *   java.naming.factory.initial = org.apache.camel.util.jndi.CamelInitialContextFactory
+ * }}}
+ *
+ * We added this for you in the `core` project.
+ *
+ * Refer to [[http://camel.apache.org/exception-javaxnamingnoinitialcontextexception.html Camel documentation]] for
+ * more details.
+ *
  *
  * ==Parameters==
  *  - '''XXX-datasource-driver''': Class name of JDBC database driver. For example, `"com.mysql.jdbc.Driver"`
