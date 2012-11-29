@@ -9,19 +9,24 @@ Connector Settings
 Parameters
 ----------
 
-factory-class-name
+- **factory-class-name**
+
   ``org.mashupbots.plebify.db.DbConnectorFactory``
 
-XXX-datasource-driver
+- **XXX-datasource-driver**
+
   Class name of JDBC database driver. For example, `"com.mysql.jdbc.Driver"`
 
-XXX-datasource-url
+- **XXX-datasource-url**
+
   Name name of database driver. For example, `"jdbc:mysql://localhost:3306/student"`
 
-XXX-datasource-user
+- **XXX-datasource-user**
+
   Username for accessing the database
 
-XXX-datasource-password
+- **XXX-datasource-password**
+
   Password for accessing the database
 
 
@@ -49,38 +54,48 @@ Fires with a record is found when running the specified SQL query.
 Settings
 --------
 
-datasource
+- **datasource**
+
   Name of datasource as specified in the connector config
 
-sql
+- **sql**
+
   SQL statement to execute
 
-max-rows
+- **max-rows**
+
   Optional maximum number of rows to be returned in a query. Defaults to ``100`` if not supplied.
 
-initial-delay
+- **initial-delay**
+
   Optional number of seconds before polling is started. Defaults to ``60`` seconds.
 
-interval
+- **interval**
+
   Optional number of seconds between polling for the database. Defaults to ``300`` seconds.
 
-sql-timeout
+- **sql-timeout**
+
   Optional number of seconds to wait for query to return. Defaults to ``30`` seconds.
 
 
 Event Data
 ----------
 
-Date
+- **Date**
+
   Timestamp when event occurred
 
-Content
+- **Content**
+
   Rows found in text format
 
-ContentType
+- **ContentType**
+
   ``text/plain``
 
-row1-cname
+- **row1-cname**
+
   Value for row ``#1`` column ``cname``. The row number and column name is dynamic and depends on the
   query. For example, ``select letters, digits from tableX`` will return fields: ``row1-letters``,
   ``row1-digits``, ``row2-letters``, ``row2-digits``, etc.
@@ -94,10 +109,12 @@ Executes an ``insert``, ``update`` or ``delete`` command.
 Settings
 --------
 
-datasource
+- **datasource**
+
   Name of datasource as specified in the connector config
 
-sql
+- **sql**
+
   SQL statement to execute. Put event data into your SQL with ``{{event data item name}}``. For example,
   to put the contents, add ``{{Contents}}``
 

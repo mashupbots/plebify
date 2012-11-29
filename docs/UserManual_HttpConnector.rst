@@ -14,10 +14,12 @@ Connector Settings
 Parameters
 ----------
 
-factory-class-name
+- **factory-class-name**
+
   ``org.mashupbots.plebify.http.HttpConnectorFactory``
 
-websocket-server-XXX 
+- **websocket-server-XXX**
+
   `Apache Camel websocket component <http://camel.apache.org/websocket.html>`_ URI. Common and producer options are
   applicable. For example, ``websocket://localhost:9999/out``.
 
@@ -41,18 +43,22 @@ frame is received, an event is fired.
 Settings
 --------
 
-uri
+- **uri**
+
   `Apache Camel jetty component <http://camel.apache.org/jetty.html>`_ URI. Common and consumer options are
   applicable. For example: ``jetty:http://localhost:8877/in``
 
-mime-type
+- **mime-type**
+
   Optional mime type of the incoming text data. Defaults to `text/plain`.
 
-contains
+- **contains**
+
   Optional comma separated list of words or phrases to match before the event fires. For example,
   ``error, warn`` to match files containing the word ``error`` or ``warn``.
 
-matches
+- **matches**
+
   Optional regular expression to match before the event fires. For example:
   ``"^([\\s\\d\\w]*(ERROR|WARN)[\\s\\d\\w]*)$"`` to match files containing the words ``ERROR`` or ``WARN``.
 
@@ -60,13 +66,16 @@ matches
 Event Data
 ----------
 
-Date
+- **Date**
+
   Timestamp when event occurred
 
-Content
-  Body of the text frame. Currently, only text email is supported. Attachments will be ignored.
+- **Content**
 
-ContentType
+  Content of the text frame. Currently, only text email is supported. Attachments will be ignored.
+
+- **ContentType**
+
   MIME Type set to `text/plain` by default
 
 
@@ -79,15 +88,18 @@ Fires with a HTTP request is received on the specified endpoint.
 Settings
 --------
 
-uri
+- **uri**
+
   `Apache Camel jetty component <http://camel.apache.org/jetty.html>`_ URI. Common and consumer options are
   applicable. For example: ``jetty:http://localhost:8877/in``
 
-contains
+- **contains**
+
   Optional comma separated list of words or phrases to match before the event fires. For example,
   ``error, warn`` to match files containing the word ``error`` or ``warn``.
 
-matches
+- **matches**
+
   Optional regular expression to match before the event fires. For example:
   ``"^([\\s\\d\\w]*(ERROR|WARN)[\\s\\d\\w]*)$"`` to match files containing the words ``ERROR`` or ``WARN``.
 
@@ -95,28 +107,36 @@ matches
 Event Data
 ----------
 
-Date
+- **Date**
+
   Timestamp when event occurred
 
-Content
+- **Content**
+
   Content of the HTTP request.
 
-ContentType
+- **ContentType**
+
   MIME Type set to `text/plain` by default
 
-HttpUri
+- **HttpUri**
+
   URI of incoming request
 
-HttpMethod
+- **HttpMethod**
+
   HTTP method. e.g. GET, POST.
 
-HttpPath
+- **HttpPath**
+
   Path part of the URI
 
-HttpQuery
+- **HttpQuery**
+
   Query part of URI
 
-HttpField_*
+- **HttpField_* **
+
   HTTP headers and posted form data fields. For example `User-Agent` will be stored as ``HttpField_User-Agent``
 
 

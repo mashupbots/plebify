@@ -9,7 +9,8 @@ Connector Settings
 Parameters
 ----------
 
-factory-class-name
+- **factory-class-name**
+
   ``org.mashupbots.plebify.mail.MailConnectorFactory``
 
 
@@ -21,15 +22,16 @@ Fires with a new email is received.  Currently, only text based email is support
 Settings
 --------
 
-uri
+- **uri**
+
   `Apache Camel mail component <http://camel.apache.org/mail.html>`_ URI. Common and consumer options are
   applicable. For example: ``imaps://imap.gmail.com:993?username=user@gmail.com&password=secret``.
 
-contains
+- **contains**
   Optional comma separated list of words or phrases to match before the event fires. For example,
   ``error, warn`` to match files containing the word ``error`` or ``warn``.
 
-matches
+- **matches**
   Optional regular expression to match before the event fires. For example:
   ``"^([\\s\\d\\w]*(ERROR|WARN)[\\s\\d\\w]*)$"`` to match files containing the words ``ERROR`` or ``WARN``.
 
@@ -37,25 +39,32 @@ matches
 Event Data
 ----------
 
-Date
+- **Date**
+
   Timestamp when event occurred
 
-Content
+- **Content**
+
   Body of the email. Currently, only text email is supported. Attachments will be ignored.
 
-ContentType
+- **ContentType**
+
   MIME Type set to `text/plain` by default
 
-SentOn
+- **SentOn**
+
   Date the email was sent
 
-From
+- **From**
+
   Sender's email address
 
-To
+- **To**
+
   Receiver's email address
 
-Subject
+- **Subject**
+
   Subject of the email
 
 
@@ -68,29 +77,37 @@ Saves the event data to file.
 Settings
 --------
 
-uri
+- **uri**
+
   `Apache Camel mail component <http://camel.apache.org/mail.html>`_ URI. Common and producer options are
   applicable. For example: ``smtps://smtp.gmail.com:465?username=user@gmail.com&password=secret``
 
-to
+- **to**
+
   The TO recipients (the receivers of the mail). Separate multiple email addresses with a comma.
 
-from
+- **from**
+
   The FROM email address.
 
-reply-to
+- **reply-to**
+
   Optional Reply-To recipients (the receivers of the response mail). Separate multiple email addresses with a comma.
 
-cc
+- **cc**
+
   Optional CC recipients (the receivers of the mail). Separate multiple email addresses with a comma.
 
-bcc
+- **bcc**
+
   Optional BCC recipients (the receivers of the mail). Separate multiple email addresses with a comma.
 
-subject
+- **subject**
+
   Optional subject of the email
 
-template
+- **template**
+
   Optional template for the body. If not specified, the value of ``Content`` will be emailed.
 
 
