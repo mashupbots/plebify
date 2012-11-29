@@ -5,13 +5,15 @@ Download and Installation
 =========================
 - `Download <https://github.com/mashupbots/plebify/downloads>`_
 
-- Unzip the package into `~/plebify` (for example)
+- Unzip the package into ``~/plebify`` (for example)
 
 - Configure
-  - Edit `~/plebify/config/application.conf`. See examples in `~/plebify/examples` for inspriation.
-  - Review logging configuration in `~/plebify/config/logback.xml`.
+
+  - Edit `~/plebify/config/application.conf`. See examples in ``~/plebify/examples`` for inspriation.
+  - Review logging configuration in ``~/plebify/config/logback.xml``.
 
 - Run
+
   - `cd ~\plbefiy\bin`
   - `.\start`
 
@@ -24,7 +26,7 @@ Configuration File
 
 
 File System Connector
-=========================
+=====================
 
 The file system connector interacts with the file system.
 
@@ -36,7 +38,7 @@ factory-class-name
   ``org.mashupbots.plebify.file.FileConnectorFactory``
 
 
-`created` Event
+"created" Event
 ---------------
 Fires with a file is created in the specified directory.
 
@@ -56,7 +58,7 @@ Fires with a file is created in the specified directory.
     Optional regular expression to match before the event fires. For example:
     ``"^([\\s\\d\\w]*(ERROR|WARN)[\\s\\d\\w]*)$"`` to match files containing the words ``ERROR`` or ``WARN``.
 
-**Data**
+**Event Data**
   Date
     Timestamp when event occurred
 
@@ -73,7 +75,7 @@ Fires with a file is created in the specified directory.
       Name of file without path
 
 
-`save` Task
+"save" Task
 -----------
 Saves the event data to file.
 

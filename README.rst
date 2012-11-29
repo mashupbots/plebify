@@ -8,9 +8,9 @@ What does Plebify do?
 =====================
 Most large applications that we've worked on have associated manual tasks such as:
 
-  - checking log files for errors
-  - running queries and emailing out the results
-  - boring data entry
+- checking log files for errors
+- running queries and emailing out the results
+- boring data entry
 
 Due to resource and budget constraints, these tasks seem to never get automated.  Rather, they 
 tend to get delegated to `Plebs <http://en.wikipedia.org/wiki/Plebs>`_.  The lower you are in 
@@ -50,14 +50,14 @@ a pull request.
 
 Links
 =====
- - `Download <https://github.com/mashupbots/plebify/downloads>`_
+- `Download <https://github.com/mashupbots/plebify/downloads>`_
 
- - `User Manual <https://github.com/mashupbots/plebify/blob/master/docs/UserManual.rst>`_
+- `User Manual <https://github.com/mashupbots/plebify/blob/master/docs/UserManual.rst>`_.
    How to install and run Plebify.
     
- - `Developer's Guide <https://github.com/mashupbots/plebify/blob/master/docs/DevelopersGuide.rst>`_ - 
-    architecture, design concepts and how to build.
+- `Developer's Guide <https://github.com/mashupbots/plebify/blob/master/docs/DevelopersGuide.rst>`_.
+   architecture, design concepts and how to build.
 
- - `Issue Tracker <https://github.com/mashupbots/plebify/issues>`_
+- `Issue Tracker <https://github.com/mashupbots/plebify/issues>`_
 
 

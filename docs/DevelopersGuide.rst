@@ -25,10 +25,10 @@ Implementation
 We wanted to use the `Actor Model <http://en.wikipedia.org/wiki/Actor_model>`_ to implement Plebify.
 
 Each element of Plebify can be represented as an actor.
- - Job
- - Connector
- - Event
- - Task
+- Job
+- Connector
+- Event
+- Task
 
 At startup, Plebify instances connector actors and job actors as per its configuration.
 
@@ -54,18 +54,18 @@ one.
 
 Here are a few other nifty features of AKKA we used:
 
- - Easy to define and parse a `HOCON <https://github.com/typesafehub/config/blob/master/HOCON.md>`_ configuration 
-   file. See the ``org.mashupbots.plebify.config`` package.
+- Easy to define and parse a `HOCON <https://github.com/typesafehub/config/blob/master/HOCON.md>`_ configuration 
+  file. See the ``org.mashupbots.plebify.config`` package.
 
- - Finite State Machine (FSM) are really handy for complex actors like the job work that has to wait for tasks to 
-   complete without blocking.
+- Finite State Machine (FSM) are really handy for complex actors like the job work that has to wait for tasks to 
+  complete without blocking.
 
- - Scheduler makes it easy to scheduling message retries where there an error or a limit has been reached.
+- Scheduler makes it easy to scheduling message retries where there an error or a limit has been reached.
 
- - Futures, a non blocking way for actors to wait for messages, are nicely integrated. The result of futures can
-   be piped into an actor's message queue.
+- Futures, a non blocking way for actors to wait for messages, are nicely integrated. The result of futures can
+  be piped into an actor's message queue.
  
--  The Microkernel is a quick and easy way to package and distribute your application.
+- The Microkernel is a quick and easy way to package and distribute your application.
 
 
 Building Plebify
