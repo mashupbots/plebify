@@ -10,10 +10,10 @@ job's event fires, its tasks are executed.
 
 For example:
 
- - when a file is created on the file system, email it to person A and HTTP post it to a REST endpoint 
-   of elasticsearch.
- - when a database is created, email the new record to a group email
- - when and email is received, write it to a database
+- when a file is created on the file system, email it to person A and HTTP post it to a REST endpoint 
+  of elasticsearch.
+- when a database is created, email the new record to a group email
+- when and email is received, write it to a database
 
 The firing of events and the execution of tasks are perform by **connectors**. Connectors are named 
 as such because they connect Plebify with applications.  For example, the mail connector connects
@@ -25,6 +25,7 @@ Implementation
 We wanted to use the `Actor Model <http://en.wikipedia.org/wiki/Actor_model>`_ to implement Plebify.
 
 Each element of Plebify can be represented as an actor.
+
 - Job
 - Connector
 - Event

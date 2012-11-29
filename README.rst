@@ -51,13 +51,15 @@ a pull request.
 Links
 =====
 - `Download <https://github.com/mashupbots/plebify/downloads>`_
+   Download the latest version of Plebify.
 
-- `User Manual <https://github.com/mashupbots/plebify/blob/master/docs/UserManual.rst>`_.
+- `User Manual <https://github.com/mashupbots/plebify/blob/master/docs/UserManual.rst>`_
    How to install and run Plebify.
     
-- `Developer's Guide <https://github.com/mashupbots/plebify/blob/master/docs/DevelopersGuide.rst>`_.
-   architecture, design concepts and how to build.
+- `Developer's Guide <https://github.com/mashupbots/plebify/blob/master/docs/DevelopersGuide.rst>`_
+   Architecture, design concepts and how to build.
 
 - `Issue Tracker <https://github.com/mashupbots/plebify/issues>`_
+   Got a bug or question? Log it here.
 
 

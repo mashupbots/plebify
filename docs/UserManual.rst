@@ -9,13 +9,13 @@ Download and Installation
 
 - Configure
 
-  - Edit `~/plebify/config/application.conf`. See examples in ``~/plebify/examples`` for inspriation.
+  - Edit ``~/plebify/config/application.conf``. See examples in ``~/plebify/examples`` for inspriation.
   - Review logging configuration in ``~/plebify/config/logback.xml``.
 
 - Run
 
-  - `cd ~\plbefiy\bin`
-  - `.\start`
+  - ``cd ~\plbefiy\bin``
+  - ``.\start``
 
 
 Configuration File
@@ -30,12 +30,9 @@ File System Connector
 
 The file system connector interacts with the file system.
 
-
-Connector Settings
-------------------
-
-factory-class-name
-  ``org.mashupbots.plebify.file.FileConnectorFactory``
+**Parameters**
+  factory-class-name
+    ``org.mashupbots.plebify.file.FileConnectorFactory``
 
 
 "created" Event
@@ -43,6 +40,7 @@ factory-class-name
 Fires with a file is created in the specified directory.
 
 **Parameters**
+
   uri
     `Apache Camel file component <http://camel.apache.org/file2.html>`_ URI. Common and consumer options are
     applicable.
@@ -58,7 +56,9 @@ Fires with a file is created in the specified directory.
     Optional regular expression to match before the event fires. For example:
     ``"^([\\s\\d\\w]*(ERROR|WARN)[\\s\\d\\w]*)$"`` to match files containing the words ``ERROR`` or ``WARN``.
 
+
 **Event Data**
+
   Date
     Timestamp when event occurred
 
