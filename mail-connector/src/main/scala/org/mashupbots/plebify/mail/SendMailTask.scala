@@ -34,7 +34,7 @@ import akka.camel.Producer
  *    define defaults in the connector configuration and refer to them.
  *  - '''to''': The TO recipients (the receivers of the mail). Separate multiple email addresses with a comma.
  *  - '''from''': The FROM email address.
- *  - '''replyTo''': Optional Reply-To recipients (the receivers of the response mail).
+ *  - '''reply-to''': Optional Reply-To recipients (the receivers of the response mail).
  *    Separate multiple email addresses with a comma.
  *  - '''cc''': Optional CC recipients (the receivers of the mail). Separate multiple email addresses with a comma.
  *  - '''bcc''': Optional BCC recipients (the receivers of the mail). Separate multiple email addresses with a comma.
@@ -58,7 +58,7 @@ class SendMailTask(val connectorConfig: ConnectorConfig, val taskConfig: TaskExe
   val headers = Map(
     ("to", configValueFor("to")),
     ("from", configValueFor("from")),
-    ("replyTo", configValueFor("replyTo", "")),
+    ("replyTo", configValueFor("reply-to", "")),
     ("cc", configValueFor("cc", "")),
     ("bcc", configValueFor("bcc", "")),
     ("subject", configValueFor("subject", ""))).filter { case (k, v) => v.length > 0 }

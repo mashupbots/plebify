@@ -171,7 +171,7 @@ object MailConnectorSpec {
       connectors = [{
           connector-id = "mail"
           factory-class-name = "org.mashupbots.plebify.mail.MailConnectorFactory"
-          my-smtp-uri = "{send-uri}"
+          my-smtp-uri = "{mail-send-uri}"
         },{
           connector-id = "test"
           factory-class-name = "org.mashupbots.plebify.mail.MailSpecConnectorFactory"
@@ -185,8 +185,8 @@ object MailConnectorSpec {
           do = [{
               connector-id = "mail"
               connector-task = "send"
-              from = "{send-from}"
-              to = "{send-to}"
+              from = "{mail-send-from}"
+              to = "{mail-send-to}"
               subject = "send email without template"
               uri = "lookup:my-smtp-uri"
 	        }]
@@ -199,8 +199,8 @@ object MailConnectorSpec {
           do = [{
               connector-id = "mail"
               connector-task = "send"
-              from = "{send-from}"
-              to = "{send-to}"
+              from = "{mail-send-from}"
+              to = "{mail-send-to}"
               subject = "send email with template"
               template = "{{one}} {{two}} {{three}}"
               uri = "lookup:my-smtp-uri"
@@ -210,7 +210,7 @@ object MailConnectorSpec {
           on = [{
               connector-id = "mail"
               connector-event = "received"
-              uri = "{receive-uri}&consumer.initialDelay=3000&consumer.delay=2000"
+              uri = "{mail-receive-uri}&consumer.initialDelay=3000&consumer.delay=2000"
 	        }]
           do = [{
               connector-id = "test"

@@ -24,6 +24,8 @@ import org.mashupbots.plebify.core.EventSubscriptionConfigReader
 import org.mashupbots.plebify.core.EventSubscriptionRequest
 import org.mashupbots.plebify.core.config.ConnectorConfig
 
+import akka.actor.Status.Failure
+import akka.camel.Ack
 import akka.camel.CamelMessage
 import akka.camel.Consumer
 
@@ -34,14 +36,15 @@ import akka.camel.Consumer
  * When one is found, an event is triggered.
  *
  * ==Parameters==
- *  - '''uri''': See [[http://camel.apache.org/file2.html Apache Camel file component]] for options.
+ *  - '''uri''': Refer to [[http://camel.apache.org/file2.html Apache Camel file component]] common and consumer
+ *    options.
  *  - '''mime-type''': Optional mime type. If not specified, one will be extrapolated using the file name extension.
  *  - '''contains''': Optional comma separated list of words or phrases to match before the event fires. For example,
  *    `error, warn` to match files containing the word `error` or `warn`.
  *  - '''matches''': Optional regular expression to match before the event fires. For example:
  *    `"^([\\s\\d\\w]*(ERROR|WARN)[\\s\\d\\w]*)$"` to match files containing the words `ERROR` or `WARN`.
  *
- * ==Event Data==
+ * ==Event Data Outputs==
  *  - '''Date''': Timestamp when event occurred
  *  - '''Content''': Contents of the file
  *  - '''ContentLength''': Length of the file
@@ -54,6 +57,21 @@ import akka.camel.Consumer
  */
 class FileCreatedEvent(val connectorConfig: ConnectorConfig, val request: EventSubscriptionRequest) extends Consumer
   with EventSubscriptionConfigReader with akka.actor.ActorLogging {
+
+  // 
+  // Have to not autoAck otherwise we get IOExcetion: Stream closed when reading files > 64K
+  //
+  // This is because stream caching is on and the temp file camel creates is deleted too soon if autoAck is turned on
+  // https://groups.google.com/forum/?fromgroups=#!msg/akka-dev/HLtR_HmMM-Y/hfP5fFzXa_UJ
+  //
+  // An alternative is to turn streamingCache off in our 
+  // akka {
+  //  camel {
+  //     streamingCache = off
+  //   }
+  // }
+  //
+  override def autoAck = false
 
   def endpointUri = configValueFor("uri")
 
@@ -94,9 +112,11 @@ class FileCreatedEvent(val connectorConfig: ConnectorConfig, val request: EventS
         } else {
           log.debug("Ignoring {} because it does not fit contains or matches criteria", fileName)
         }
+        sender ! Ack
       } catch {
         case ex: Throwable =>
           log.error(ex, "Error processing {}", msg)
+          sender ! Failure(ex)
       }
   }
 }

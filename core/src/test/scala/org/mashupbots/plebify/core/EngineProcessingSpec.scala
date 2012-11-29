@@ -15,22 +15,24 @@
 //
 package org.mashupbots.plebify.core
 
-import akka.actor.ActorSystem
-import akka.actor.Actor
-import akka.actor.Props
-import akka.testkit.TestKit
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.DurationInt
+
+import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
-import org.scalatest.BeforeAndAfterAll
-import akka.testkit.ImplicitSender
-import com.typesafe.config.ConfigFactory
-import scala.concurrent.duration._
-import org.mashupbots.plebify.core.config.ConnectorConfig
-import akka.actor.ActorRef
 import org.slf4j.LoggerFactory
+
+import com.typesafe.config.ConfigFactory
+
+import akka.actor.Actor
 import akka.actor.ActorContext
-import org.mashupbots.plebify.core.config.EventSubscriptionConfig
-import scala.collection.mutable.ListBuffer
+import akka.actor.ActorRef
+import akka.actor.ActorSystem
+import akka.actor.Props
+import akka.testkit.ImplicitSender
+import akka.testkit.TestKit
 
 object EngineProcessingSpec {
 

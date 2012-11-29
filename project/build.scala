@@ -1,5 +1,5 @@
 //
-// Socko Web Server build file
+// Plebify build file
 //
 
 import sbt._
@@ -9,12 +9,13 @@ import sbt.Project.Initialize
 import sbtassembly.Plugin._
 import AssemblyKeys._
 import akka.sbt.AkkaKernelPlugin
-import akka.sbt.AkkaKernelPlugin.{ Dist, outputDirectory, distJvmOptions, distMainClass }
- 
+import akka.sbt.AkkaKernelPlugin.{ Dist, dist, outputDirectory, distJvmOptions, distMainClass }
+import java.io.File
+
 //
 // Build setup
 //
-object SockoBuild extends Build {
+object PlebifyBuild extends Build {
 
   val plebifyVersion = "0.1.0"
 
@@ -183,10 +184,31 @@ object SockoBuild extends Build {
         libraryDependencies ++= Dependencies.kernel,
         distJvmOptions in Dist := "-Xms256M -Xmx1024M",
         outputDirectory in Dist := file("target/plebify-" + plebifyVersion),
-        distMainClass in Dist := "akka.kernel.Main org.mashupbots.plebify.kernel.PlebifyKernel"
+        distMainClass in Dist := "akka.kernel.Main org.mashupbots.plebify.kernel.PlebifyKernel",
+        dist <<= (dist, sourceDirectory, state) map { (targetDir:File, srcDir:File, st) => {
+            val log = st.log
+            val fromDir = new File(srcDir, "examples")
+            val toDir = new File(targetDir, "examples")
+            ExtraWork.copyFiles(fromDir, toDir)
+            log.info("Copied examples")
+            targetDir
+          }
+        }
       )
   )  
 
+}
+
+//
+// Extra build work that we have to do
+//
+object ExtraWork {
+  def copyFiles(fromDir: File, toDir: File) = {
+    val files = fromDir.listFiles.filter(f => f.isFile)
+    for (f <- files) {
+      IO.copyFile(f, new File(toDir, f.getName))
+    }
+  }
 }
 
 //

@@ -30,12 +30,12 @@ import akka.camel.Producer
  * Saves data to the specified file
  *
  * ==Parameters==
- *  - '''uri''': See [[http://camel.apache.org/file2.html Apache Camel file component]] for options.
+ *  - '''uri''': Refer to [[http://camel.apache.org/file2.html Apache Camel file component]] common and producer
+ *    options.
+ *  - '''file-name-field''': Optional name of field in the event data that contains the name of the file to use.
+ *    If not supplied, or value is empty, then the default file name will be used as specified in the `uri`.
  *  - '''template''': Optional template for the contents of the file. If not specified, the value of `Contents` will
  *    be saved.
- *
- * ==Event Data==
- *  - '''Content''': Contents to save to file
  *
  * @param connectorConfig Connector configuration.
  * @param taskConfig Task configuration
@@ -47,6 +47,8 @@ class SaveFileTask(val connectorConfig: ConnectorConfig, val taskConfig: TaskExe
 
   val template = configValueFor("template", "")
 
+  val fileNameField = configValueFor("file-name-field", "")
+
   /**
    * Transforms TaskExecutionRequest into a CamelMessage
    */
@@ -56,7 +58,15 @@ class SaveFileTask(val connectorConfig: ConnectorConfig, val taskConfig: TaskExe
       val contents = if (template.isEmpty) msg.eventNotification.data(EventData.Content)
       else EventData.mergeTemplate(template, msg.eventNotification.data)
 
-      CamelMessage(contents, Map.empty)
+      val fileName: Map[String, Any] =
+        if (fileNameField.isEmpty) Map.empty
+        else {
+          val fn = msg.eventNotification.data.get(fileNameField)
+          if (fn.isEmpty) Map.empty
+          else Map(("CamelFileName", fn.get))
+        }
+
+      CamelMessage(contents, Map.empty ++ fileName)
     }
   }
 }

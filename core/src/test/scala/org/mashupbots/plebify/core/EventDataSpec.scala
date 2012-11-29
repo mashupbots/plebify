@@ -15,13 +15,14 @@
 //
 package org.mashupbots.plebify.core
 
-import org.scalatest.WordSpec
-import org.scalatest.matchers.ShouldMatchers
-import org.scalatest.GivenWhenThen
-import org.scalatest.BeforeAndAfterAll
+import java.util.Calendar
 import java.util.Date
 import java.util.GregorianCalendar
-import java.util.Calendar
+
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.GivenWhenThen
+import org.scalatest.WordSpec
+import org.scalatest.matchers.ShouldMatchers
 
 class EventDataSpec extends WordSpec with ShouldMatchers with GivenWhenThen with BeforeAndAfterAll {
 

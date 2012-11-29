@@ -96,6 +96,7 @@ class MailReceivedEvent(val connectorConfig: ConnectorConfig, val request: Event
         } else {
           log.debug("Ignoring {} because it does not fit contains or matches criteria", content)
         }
+        
       } catch {
         case ex: Throwable =>
           log.error(ex, "Error processing {}", msg)
