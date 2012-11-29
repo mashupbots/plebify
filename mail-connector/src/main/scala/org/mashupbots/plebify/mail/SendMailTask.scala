@@ -42,9 +42,6 @@ import akka.camel.Producer
  *  - '''template''': Optional template for the body. If not specified, the value of `Contents` will
  *    be emailed.
  *
- * ==Event Data==
- *  - '''Content''': Contents to send in the body of the email
- *
  * @param connectorConfig Connector configuration.
  * @param taskConfig Task configuration
  */

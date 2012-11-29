@@ -43,7 +43,7 @@ import akka.camel.Consumer
  *  - '''Date''': Timestamp when event occurred
  *  - '''Content''': Contents of the email
  *  - '''ContentType''': MIME Type set to `text/plain` by default
- *  - '''SendOn''': Date the email was sent
+ *  - '''SentOn''': Date the email was sent
  *  - '''From''': Sender's email address
  *  - '''To''': Receiver's email address
  *  - '''Subject''': Subject of the email
@@ -87,7 +87,7 @@ class MailReceivedEvent(val connectorConfig: ConnectorConfig, val request: Event
             (EventData.Date, EventData.dateTimeToString(new Date())),
             (EventData.Content, content),
             (EventData.ContentType, "text/plain"),
-            ("SendOn", EventData.readCamelHeader(msg, "Date")),
+            ("SentOn", EventData.readCamelHeader(msg, "Date")),
             ("From", EventData.readCamelHeader(msg, "From")),
             ("To", EventData.readCamelHeader(msg, "To")),
             ("Subject", EventData.readCamelHeader(msg, "Subject")))

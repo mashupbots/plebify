@@ -101,3 +101,37 @@ Setting up Eclipse
   - Click ``Finish``
 
 
+Running ScalaTests
+==================
+
+We run scala tests from eclipse.  From ``sbt`` there are errors where ``scala.actors.Actors`` cannot be found.
+This is a temporary error with Scala 2.10 still being in RC and ScalaTest not fully updated (I think).
+
+Before you run the scalatest, you will need to setup `plebify-test-config.txt` in your home directory.  It needs
+to contain your credentials and other settings for access connector resources.
+
+::
+
+  #
+  # Settings for org.mashupbots.plebify.mail.MailConnectorSpec
+  #
+  mail-send-from=user@gmail.com
+  mail-send-to=user@gmail.com
+  mail-send-uri=smtps://smtp.gmail.com:465?username=user@gmail.com&password=secret
+  mail-receive-uri=imaps://imap.gmail.com:993?username=user@gmail.com&password=secret
+
+  #
+  # Settings for org.mashupbots.plebify.db.DbConnectorSpec
+  #
+  datasource-driver = com.mysql.jdbc.Driver
+  datasource-url = jdbc:mysql://127.0.0.1:3306/test
+  datasource-user = test
+  datasource-password = test123
+
+
+
+
+
+
+
+

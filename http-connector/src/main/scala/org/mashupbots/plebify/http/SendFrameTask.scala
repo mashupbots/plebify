@@ -27,10 +27,8 @@ import akka.actor.Actor
  *
  * ==Parameters==
  *  - '''websocket-server''': Name of the websocket server as specified in the connector config
- *  - '''template''': Optional template frame. If not specified, the value of `Contents` passed in will be sent.
+ *  - '''template''': Optional template for the data to send. If not specified, value of `Contents` will be sent.
  *
- * ==Event Data==
- *  - '''Content''': Content to send.
  *
  * @param connectorConfig Connector configuration.
  * @param taskConfig Task configuration

@@ -45,7 +45,6 @@ import akka.camel.Consumer
  * ==Event Data==
  *  - '''Date''': Timestamp when event occurred
  *  - '''Content''': Contents of the file
- *  - '''ContentLength''': Length of the content
  *  - '''ContentType''': MIME type
  *  - '''HttpUri''': URI of incoming request
  *  - '''HttpMethod''': HTTP method

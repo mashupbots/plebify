@@ -66,6 +66,7 @@ trait SqlQueryEventData
  * ==Event Data==
  *  - '''Date''': Timestamp when event occurred
  *  - '''Content''': Rows found in text format
+ *  - '''ContentType''': text/plain
  *  - '''row1-cname''': Value for row `#1` column `cname`.
  *
  * @param connectorConfig Connector configuration.

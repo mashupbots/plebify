@@ -41,7 +41,6 @@ import akka.camel.Consumer
  * ==Event Data==
  *  - '''Date''': Timestamp when event occurred
  *  - '''Content''': Contents of the file
- *  - '''ContentLength''': Length of the content
  *  - '''ContentType''': defaults to 'text/plain' if not set in the above parameter
  *
  * @param connectorConfig Connector configuration.
