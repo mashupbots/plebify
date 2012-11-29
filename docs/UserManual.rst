@@ -172,15 +172,16 @@ do Tasks
 You can specify one or more tasks between the ``[ ]``.  Each task must be enclosed by ``{ }`` 
 and separated by comma. Each task setting must be on a new line.
 
-- connector-id 
+- **connector-id**.
   Id of the connector containing the event to which we wish to subscribe. This must be present in
   the connectors section of the confguration file.
 
-- connector-task
+- **connector-task**.
   Name of the task in the connector to which we wish to execute. See connector reference for 
   details.
 
-- description 
+- **description**
+
   Optional description of this task
 
 - execution-timeout 
