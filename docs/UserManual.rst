@@ -172,11 +172,12 @@ do Tasks
 You can specify one or more tasks between the ``[ ]``.  Each task must be enclosed by ``{ }`` 
 and separated by comma. Each task setting must be on a new line.
 
-- **connector-id**.
+- **connector-id**
   Id of the connector containing the event to which we wish to subscribe. This must be present in
   the connectors section of the confguration file.
 
-- **connector-task**.
+- **connector-task**
+
   Name of the task in the connector to which we wish to execute. See connector reference for 
   details.
 
@@ -185,10 +186,12 @@ and separated by comma. Each task setting must be on a new line.
   Optional description of this task
 
 - execution-timeout 
+
   Optional number of seconds the job will wait for a task to execute before timing out.
   Defaults to ``30`` seconds.
 
 - on-success
+
   Optional next step if this task is completed **without** errors. Valid values are:
 
   - ``next`` to execute the next task or terminate with success if this is the last task. This is the default.
@@ -197,6 +200,7 @@ and separated by comma. Each task setting must be on a new line.
   - Number of the next task to run; with 1 being the 1st task in the collection.
 
 - on-fail
+
   Optional next step if this task is completed **with** errors. Valid values are:
 
   - ``next`` to execute the next task or terminate with success if this is the last task. 
@@ -205,13 +209,16 @@ and separated by comma. Each task setting must be on a new line.
   - Number of the next task to run; with 1 being the 1st task in the collection.
 
 - max-retry-count
+
   Optional maximum number of times a task is re-executed when an error response is received; before the
   task is deemed to have failed. Default is ``3`` times.
 
 - retry-interval 
+
   Optional number of seconds between retry attempts. Defaults to ``3`` seconds.
 
 - "Connector Task Specific Settings"
+
   These are specified in the connector reference.
 
 
