@@ -222,22 +222,22 @@ When a event fires, associated data is provided in the notification that is sent
 
 Common Fields in the event data includes:
 
-- Id
-  Unique identifier for this message
+  Id
+    Unique identifier for this message
 
-- Date
-  Timestamp the event was triggered
+  Date
+    Timestamp the event was triggered
 
-- Content
-  Data that was received
+  Content
+    Data that was received
 
-- LastModified
-  Optional timestamp when the data was last modified
+  LastModified
+    Optional timestamp when the data was last modified
 
-- ContentType
-  MIME type of the content
+  ContentType
+    MIME type of the content
 
-- Connector event specific fields may optionally be supplied.  These are defined in the connector reference.
+Connector event specific fields may optionally be supplied.  These are defined in the connector reference.
 
 
 **Notes**
