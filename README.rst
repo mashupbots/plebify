@@ -1,27 +1,26 @@
-plebify
-=======
+Plebify
+*******
 
 A simple event triggered task runner.
 
 
 What does Plebify do?
----------------------
-Most large application that we've worked on always have associated manual tasks such as:
+=====================
+Most large applications that we've worked on have associated manual tasks such as:
 
   - checking log files for errors
   - running queries and emailing out the results
-  - the dreaded data entry  
+  - boring data entry
 
-Due to resource and budget constraints, these tasks never gets automated.  Rather, they tend to
-get delegated to `Plebs <http://en.wikipedia.org/wiki/Plebs>`_.  The lower you are in the team,
-the more likely it is you will be doing these tasks.
+Due to resource and budget constraints, these tasks seem to never get automated.  Rather, they 
+tend to get delegated to `Plebs <http://en.wikipedia.org/wiki/Plebs>`_.  The lower you are in 
+the team, the more likely it is you will be doing these tasks.
 
 Plebify aims to be your virtual pleb.
 
 For example:
 
-1. Scan a directory for the log file and email it to you if the file is missing or the file contains
-   the word "error".
+1. Scan a directory for log files and email it to you if the file contains the word "error".
 
 2. When a new record is added to a products database table, send email notifications to product
    managers and add an entry to a new products RSS feed.
@@ -29,69 +28,36 @@ For example:
 3. When an email arrives containing an order form, add it to the orders database table.
 
 
-High-level Design and Architecture
-----------------------------------
-At its core, Plebify is rules based a data exchange for applications.
+Road Map
+========
+Plebify is still in proof of concept.
 
-The rules are defined as jobs.  Each job comprise of events and tasks.  When a job's event fires,
-its tasks are executed.
+We would like to add a few more features and error handling before we call it alpha.
 
-For example:
+Currently, it is only customisable via its configuration files.  It is envisaged that, eventually, 
+web based configuration will be available.  Changes will take effect immediately and plebify will
+not have to be restarted.
 
- - when a file is created on the file system, email it to person A and HTTP post it to a REST endpoint 
-   of elasticsearch.
- - when a database is created, email the new record to a group email
- - when and email is received, write it to a database record
+Currently, it only supports system integration via HTTP, Web Sockets, file system and email. We
+want to add more connectors to more systems.
 
-To assist with system integration, we want to use `Apache Camel <http://camel.apache.org/>`_.  
-It is a proven product that supports many different types of transports and data formats.
+Currently, it only supports basic templating when converting data to text. We want to add a better
+templating engine.
 
-We decided to implemented Plebify using Scala 2.10 and Akka 2.1 because they support Camel and the actor 
-model.
-
-MORE INFO TO COME....
+If you got an idea for a connector, please let us know by opening a ticket; or better still, send us
+a pull request.
 
 
+Links
+=====
+ - `Download <https://github.com/mashupbots/plebify/downloads>`_
 
-Using Plebify from the Command Line
------------------------------------
-TO DO
+ - `User Manual <https://github.com/mashupbots/plebify/blob/master/docs/UserManual.rst>`_
+   How to install and run Plebify.
+    
+ - `Developer's Guide <https://github.com/mashupbots/plebify/blob/master/docs/DevelopersGuide.rst>`_ - 
+    architecture, design concepts and how to build.
 
-
-
-Using Plebify as a Library
---------------------------
-TO DO
-
-
-
-
-Building Plebify
-----------------
-- Download and install `sbt <http://www.scala-sbt.org/>`_ 0.12.1.
-
-- Clone our the code from github
-
-- Run ``sbt`` from the root source directory
-
-
-
-Setting up Eclipse
-------------------
-- We are currently using Scala 2.10 RC2 and JDK7.
-
-- We are currently using Eclipse 4.2 Juno with `Scala IDE <http://scala-ide.org/>`_ 2.1.0 Milestone 2.
-
-- Generate eclipse project files: ``sbt eclispse``
-
-- Start ``Eclipse``
-
-- From the top menu, select ``File`` | ``Import``
-
-  - Select ``General`` | ``Existing Projects into Workspace``.
-  - Click ``Next``.
-  - Select the ``plebify`` directory as the root
-  - Select all sub projects
-  - Click ``Finish``
+ - `Issue Tracker <https://github.com/mashupbots/plebify/issues>`_
 
 
