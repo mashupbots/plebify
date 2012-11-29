@@ -39,7 +39,7 @@ import akka.camel.Producer
  *  - '''cc''': Optional CC recipients (the receivers of the mail). Separate multiple email addresses with a comma.
  *  - '''bcc''': Optional BCC recipients (the receivers of the mail). Separate multiple email addresses with a comma.
  *  - '''subject''': Optional subject of the email
- *  - '''template''': Optional template for the body. If not specified, the value of `Contents` will
+ *  - '''template''': Optional template for the body. If not specified, the value of `Content` will
  *    be emailed.
  *
  * @param connectorConfig Connector configuration.

@@ -31,7 +31,7 @@ import akka.camel.Producer
  * ==Parameters==
  *  - '''uri''': See [[http://camel.apache.org/jetty.html Apache Camel jetty component]] for options.
  *  - '''method''': GET, POST or PUT. Defaults to POST.
- *  - '''template''': Optional template for the post/put data. If not specified, value of `Contents` will be posted.
+ *  - '''template''': Optional template for the post/put data. If not specified, value of `Content` will be posted.
  *
  * ==Event Data==
  *  - '''Content''': Content to send. Ignored if method is GET.

@@ -34,7 +34,7 @@ import akka.camel.Producer
  *    options.
  *  - '''file-name-field''': Optional name of field in the event data that contains the name of the file to use.
  *    If not supplied, or value is empty, then the default file name will be used as specified in the `uri`.
- *  - '''template''': Optional template for the contents of the file. If not specified, the value of `Contents` will
+ *  - '''template''': Optional template for the contents of the file. If not specified, the value of `Content` will
  *    be saved.
  *
  * @param connectorConfig Connector configuration.

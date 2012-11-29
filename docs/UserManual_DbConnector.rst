@@ -8,20 +8,21 @@ Connector Settings
 
 Parameters
 ----------
-  factory-class-name
-    ``org.mashupbots.plebify.db.DbConnectorFactory``
 
-  XXX-datasource-driver
-    Class name of JDBC database driver. For example, `"com.mysql.jdbc.Driver"`
+factory-class-name
+  ``org.mashupbots.plebify.db.DbConnectorFactory``
 
-  XXX-datasource-url
-    Name name of database driver. For example, `"jdbc:mysql://localhost:3306/student"`
+XXX-datasource-driver
+  Class name of JDBC database driver. For example, `"com.mysql.jdbc.Driver"`
 
-  XXX-datasource-user
-    Username for accessing the database
+XXX-datasource-url
+  Name name of database driver. For example, `"jdbc:mysql://localhost:3306/student"`
 
-  XXX-datasource-password
-    Password for accessing the database
+XXX-datasource-user
+  Username for accessing the database
+
+XXX-datasource-password
+  Password for accessing the database
 
 
 Note that ``XXX`` is the name of your datasource. It will be used in events and tasks.
@@ -45,44 +46,44 @@ examples illustrates 2 databases named ``prod`` and ``test``.
 ====================
 Fires with a record is found when running the specified SQL query.
 
-Parameters
-----------
+Settings
+--------
 
-  datasource
-    Name of datasource as specified in the connector config
+datasource
+  Name of datasource as specified in the connector config
 
-  sql
-    SQL statement to execute
+sql
+  SQL statement to execute
 
-  max-rows
-    Optional maximum number of rows to be returned in a query. Defaults to ``100`` if not supplied.
+max-rows
+  Optional maximum number of rows to be returned in a query. Defaults to ``100`` if not supplied.
 
-  initial-delay
-    Optional number of seconds before polling is started. Defaults to ``60`` seconds.
+initial-delay
+  Optional number of seconds before polling is started. Defaults to ``60`` seconds.
 
-  interval
-    Optional number of seconds between polling for the database. Defaults to ``300`` seconds.
+interval
+  Optional number of seconds between polling for the database. Defaults to ``300`` seconds.
 
-  sql-timeout
-    Optional number of seconds to wait for query to return. Defaults to ``30`` seconds.
+sql-timeout
+  Optional number of seconds to wait for query to return. Defaults to ``30`` seconds.
 
 
 Event Data
 ----------
 
-  Date
-    Timestamp when event occurred
+Date
+  Timestamp when event occurred
 
-  Content
-    Rows found in text format
+Content
+  Rows found in text format
 
-  ContentType
-    ``text/plain``
+ContentType
+  ``text/plain``
 
-  row1-cname
-    Value for row ``#1`` column ``cname``. The row number and column name is dynamic and depends on the
-    query. For example, ``select letters, digits from tableX`` will return fields: ``row1-letters``,
-    ``row1-digits``, ``row2-letters``, ``row2-digits``, etc.
+row1-cname
+  Value for row ``#1`` column ``cname``. The row number and column name is dynamic and depends on the
+  query. For example, ``select letters, digits from tableX`` will return fields: ``row1-letters``,
+  ``row1-digits``, ``row2-letters``, ``row2-digits``, etc.
 
 
 
@@ -90,15 +91,15 @@ Event Data
 ====================
 Executes an ``insert``, ``update`` or ``delete`` command.
 
-Parameters
-----------
+Settings
+--------
 
-  datasource
-    Name of datasource as specified in the connector config
+datasource
+  Name of datasource as specified in the connector config
 
-  sql
-    SQL statement to execute. Put event data into your SQL with ``{{event data item name}}``. For example,
-    to put the contents, add ``{{Contents}}``
+sql
+  SQL statement to execute. Put event data into your SQL with ``{{event data item name}}``. For example,
+  to put the contents, add ``{{Contents}}``
 
 
 

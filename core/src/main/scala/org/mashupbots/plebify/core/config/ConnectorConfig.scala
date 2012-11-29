@@ -23,6 +23,7 @@ import scala.collection.JavaConversions._
  * Connector configuration
  *
  * @param id Unique id of this connector
+ * @param description Text description of this connector
  * @param factoryClassName Full class path to factory class that will instance our actor
  * @param initializationTimeout Number of seconds the engine will wait for the
  *  [[org.mashupbots.plebify.core.StartResponse]] message after sending the [[org.mashupbots.plebify.core.StartRequest]]
