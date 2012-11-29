@@ -1,0 +1,37 @@
+<html>
+<head>
+  <title>Web Socket Test</title>
+</head>
+
+<body>
+<script type="text/javascript">
+var socket;
+if (!window.WebSocket) {
+  window.WebSocket = window.MozWebSocket;
+}
+if (window.WebSocket) {
+  socket = new WebSocket("ws://localhost:9999/out");
+  socket.onmessage = function(event) {
+    var ta = document.getElementById('responseText');
+    ta.value = ta.value + '\n' + event.data
+  };
+  socket.onopen = function(event) {
+    var ta = document.getElementById('responseText');
+    ta.value = "Web Socket opened!";
+  };
+  socket.onclose = function(event) {
+    var ta = document.getElementById('responseText');
+    ta.value = ta.value + '\n' + "Web Socket closed"; 
+  };
+} else {
+  alert("Your browser does not support Web Socket.");
+}
+</script>
+
+<h1>Plebify HTTP to Websocket</h1>
+<form onsubmit="return false;">
+<textarea id="responseText" style="width:500px;height:300px;"></textarea>
+</form>
+</body>
+</html>
+
