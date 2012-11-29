@@ -67,7 +67,7 @@ For example:
   }
 
 
-The format of the file is `HOCON <https://github.com/typesafehub/config/blob/master/HOCON.md>`.
+The format of the file is `HOCON <https://github.com/typesafehub/config/blob/master/HOCON.md>`_.
 
 The file is split into 2 parts: 
 
@@ -84,19 +84,19 @@ Connectors
 You can specify one or more connectors between the ``[ ]``.  Each connector must be enclosed by ``{ }`` 
 and separated by comma. Each connector setting must be on a new line.
 
-id
+- id
   Unique name of this connector
 
-description
+- description
   Optional description of this connector
 
-factory-class-name 
+- factory-class-name 
   Full class path to actor factory class of a connector. See connector reference for details.
 
-initialization-timeout 
+- initialization-timeout 
   Optional number of seconds to wait for a connector to successfully start up. Defaults to ``30`` seconds.
 
-"Connector Specific Settings"
+- "Connector Specific Settings"
   These are specified in the connector reference.
 
 
@@ -106,37 +106,37 @@ Jobs
 Like connectors, you can specify one or more jobs between the ``[ ]``.  Each job must be enclosed by ``{ }`` 
 and separated by comma. Each job setting must be on a new line.
 
-id
+- id
   Unique id of this job
 
-description
+- description
   Optional description of this job
 
-initialization-timeout 
+- initialization-timeout 
   Optional number of seconds to wait for this job to start before timeout. Defaults to ``30`` seconds.
 
-max-worker-count 
+- max-worker-count 
   Optional maximum number of active job worker actors that can be concurrently active (executing tasks). 
   Defaults to ``5``.
 
-max-worker-strategy 
+- max-worker-strategy 
   Optional strategy to use for handling situations where `max-worker-count` has been reached and more events 
   are received. Options are ``queue`` the event in the job (default) or ``reschedule`` the event to be 
   processed by the job later.
 
-queue-size 
+- queue-size 
   Optional maximum number of event notification messages to queue if `max-worker-count` has been reached and
   ``max-worker-strategy`` is set to ``reschedule``. If 0, all excess messages will be ignored; i.e. no queue. 
   Default to ``100``.
 
-reschedule-interval 
+- reschedule-interval 
   Optional number of seconds to resechedule an event notification for re-processing if `max-worker-count` has 
   been reached and ``max-worker-strategy`` is set to ``reschedule``. Defaults to ``5`` seconds.
 
-on
+- on
   Connection of events to subscribe to for this job.  See below for more details
 
-do
+- do
   Connection of tasks to execute to for this job.  See below for more details
 
 
@@ -146,22 +146,22 @@ on Events
 You can specify one or more events between the ``[ ]``.  Each event must be enclosed by ``{ }`` 
 and separated by comma. Each event setting must be on a new line.
 
-connector-id 
+- connector-id 
   Id of the connector containing the event to which we wish to subscribe. This must be present in
   the connectors section of the confguration file.
 
-connector-event 
+- connector-event 
   Name of the event in the connector to which we wish to subscribe. See connector reference for 
   details.
 
-description 
+- description 
   Optional description of this event subscription
 
-initialization-timeout 
+- initialization-timeout 
   Optional number of seconds the job will wait for a subscription to be setup before timing out.
   Defaults to ``30`` seconds.
 
-"Connector Events Specific Settings"
+- "Connector Events Specific Settings"
   These are specified in the connector reference.
 
 
@@ -172,22 +172,22 @@ do Tasks
 You can specify one or more tasks between the ``[ ]``.  Each task must be enclosed by ``{ }`` 
 and separated by comma. Each task setting must be on a new line.
 
-connector-id 
+- connector-id 
   Id of the connector containing the event to which we wish to subscribe. This must be present in
   the connectors section of the confguration file.
 
-connector-task
+- connector-task
   Name of the task in the connector to which we wish to execute. See connector reference for 
   details.
 
-description 
+- description 
   Optional description of this task
 
-execution-timeout 
+- execution-timeout 
   Optional number of seconds the job will wait for a task to execute before timing out.
   Defaults to ``30`` seconds.
 
-on-success
+- on-success
   Optional next step if this task is completed **without** errors. Valid values are:
 
   - ``next`` to execute the next task or terminate with success if this is the last task. This is the default.
@@ -195,7 +195,7 @@ on-success
   - ``fail`` to stop task execution and terminate with an error
   - Number of the next task to run; with 1 being the 1st task in the collection.
 
-on-fail
+- on-fail
   Optional next step if this task is completed **with** errors. Valid values are:
 
   - ``next`` to execute the next task or terminate with success if this is the last task. 
@@ -203,12 +203,15 @@ on-fail
   - ``fail`` to stop task execution and terminate with an error. This is the default.
   - Number of the next task to run; with 1 being the 1st task in the collection.
 
-max-retry-count
+- max-retry-count
   Optional maximum number of times a task is re-executed when an error response is received; before the
   task is deemed to have failed. Default is ``3`` times.
 
-retry-interval 
+- retry-interval 
   Optional number of seconds between retry attempts. Defaults to ``3`` seconds.
+
+- "Connector Task Specific Settings"
+  These are specified in the connector reference.
 
 
 
@@ -219,22 +222,22 @@ When a event fires, associated data is provided in the notification that is sent
 
 Common Fields in the event data includes:
 
-Id
+- Id
   Unique identifier for this message
 
-Date
+- Date
   Timestamp the event was triggered
 
-Content
+- Content
   Data that was received
 
-LastModified
+- LastModified
   Optional timestamp when the data was last modified
 
-ContentType
+- ContentType
   MIME type of the content
 
-Connector event specific fields may optionally be supplied.  These are defined in the connector reference.
+- Connector event specific fields may optionally be supplied.  These are defined in the connector reference.
 
 
 **Notes**
