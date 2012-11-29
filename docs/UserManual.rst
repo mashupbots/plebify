@@ -292,7 +292,7 @@ Connector Reference
 - `HTTP Connector <https://github.com/mashupbots/plebify/blob/master/docs/UserManual_HttpConnector.rst>`_
    Connects Plebify to systems using HTTP and Websocket protocols.
 
-- `Mail Connector <https://github.com/mashupbots/plebify/blob/master/docs/UserManual_HttpConnector.rst>`_
+- `Mail Connector <https://github.com/mashupbots/plebify/blob/master/docs/UserManual_MailConnector.rst>`_
    Connects Plebify to email.
 
 

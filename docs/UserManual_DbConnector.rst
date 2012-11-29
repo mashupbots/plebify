@@ -116,7 +116,7 @@ Settings
 - **sql**
 
   SQL statement to execute. Put event data into your SQL with ``{{event data item name}}``. For example,
-  to put the contents, add ``{{Contents}}``
+  to put the contents, add ``{{Content}}``
 
 
 

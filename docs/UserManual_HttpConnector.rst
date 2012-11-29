@@ -135,7 +135,7 @@ Event Data
 
   Query part of URI
 
-- **HttpField_* **
+- ** HttpField_* **
 
   HTTP headers and posted form data fields. For example `User-Agent` will be stored as ``HttpField_User-Agent``
 
