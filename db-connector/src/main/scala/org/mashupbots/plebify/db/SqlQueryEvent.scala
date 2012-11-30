@@ -121,7 +121,7 @@ class SqlQueryEvent(val connectorConfig: ConnectorConfig, val request: EventSubs
       future pipeTo self
       goto(Active)
     case unknown =>
-      log.debug("Recieved message while Uninitialised: {}", unknown.toString)
+      log.debug("Received message while Uninitialised: {}", unknown.toString)
       stay
   }
 
@@ -153,7 +153,7 @@ class SqlQueryEvent(val connectorConfig: ConnectorConfig, val request: EventSubs
       goto(Idle)
     }
     case unknown =>
-      log.debug("Recieved unknown message while Active: {}", unknown.toString)
+      log.debug("Received unknown message while Active: {}", unknown.toString)
       stay
   }
 

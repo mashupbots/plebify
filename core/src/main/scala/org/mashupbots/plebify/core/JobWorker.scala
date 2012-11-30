@@ -137,7 +137,7 @@ class JobWorker(jobConfig: JobConfig, eventNotification: EventNotification) exte
       goto(Active) using executeCurrentTask(Progress())
     }
     case unknown =>
-      log.debug("Recieved unknown message while Idle: {}", unknown.toString)
+      log.debug("Received unknown message while Idle: {}", unknown.toString)
       stay
   }
 
@@ -153,7 +153,7 @@ class JobWorker(jobConfig: JobConfig, eventNotification: EventNotification) exte
       stay using executeCurrentTask(progress)
     }
     case unknown =>
-      log.debug("Recieved unknown message while Active: {}", unknown.toString)
+      log.debug("Received unknown message while Active: {}", unknown.toString)
       stay
   }
 

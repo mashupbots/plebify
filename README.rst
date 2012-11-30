@@ -1,7 +1,8 @@
 Plebify
 *******
 
-A simple event triggered task runner.
+A simple event triggered task runner written in Scala and Akka.
+
 
 
 What does Plebify do?
@@ -10,11 +11,11 @@ Most large applications that we've worked on have associated manual tasks such a
 
 - checking log files for errors
 - running queries and emailing out the results
-- boring data entry
+- consoliation files from various systems for batch upload
 
-Due to resource and budget constraints, these tasks seem to never get automated.  Rather, they 
+Due to resource and budget constraints, these tasks never get automated.  Rather, they 
 tend to get delegated to `Plebs <http://en.wikipedia.org/wiki/Plebs>`_.  The lower you are in 
-the team, the more likely it is you will be doing these tasks.
+the team, the more likely it is that you will perform these tasks.
 
 Plebify aims to be your virtual pleb.
 
@@ -28,24 +29,24 @@ For example:
 3. When an email arrives containing an order form, add it to the orders database table.
 
 
+
 Road Map
 ========
-Plebify is still in proof of concept.
+We would consider Plebify as being in "alpha" and usable for non-critial purposes.
 
-We would like to add a few more features and error handling before we call it alpha.
-
-Currently, it is only customisable via its configuration files.  It is envisaged that, eventually, 
-web based configuration will be available.  Changes will take effect immediately and plebify will
+Currently, Plebify is only customisable via its configuration files.  It is envisaged that, eventually, 
+a web based configuration will be available.  Changes will take effect immediately and Plebify will
 not have to be restarted.
 
-Currently, it only supports system integration via HTTP, Web Sockets, file system and email. We
-want to add more connectors to more systems.
+Currently, Plebify only supports system integration via HTTP, Web Sockets, file system and email. We
+will be adding more connectors.
 
-Currently, it only supports basic templating when converting data to text. We want to add a better
+Currently, it only supports basic templating when converting data to text. We will add a better
 templating engine.
 
-If you got an idea for a connector, please let us know by opening a ticket; or better still, send us
-a pull request.
+If you got an idea for an improvement or found a bug, please let us know by opening a ticket; or better 
+still, send us a pull request.
+
 
 
 Links
@@ -54,10 +55,13 @@ Links
    Download the latest version of Plebify.
 
 - `User Manual <https://github.com/mashupbots/plebify/blob/master/docs/UserManual.rst>`_
-   How to install and run Plebify.
+   Installation. Getting Started. Connector Reference.
     
 - `Developer's Guide <https://github.com/mashupbots/plebify/blob/master/docs/DevelopersGuide.rst>`_
-   Architecture, design concepts and how to build.
+   Architecture, design concepts and how to build. 
+
+- `Akka Patterns <https://github.com/mashupbots/plebify/blob/master/docs/AkkaPatterns.rst>`_
+   Learning Akka? Here are a few lessons that we've learnt.
 
 - `Issue Tracker <https://github.com/mashupbots/plebify/issues>`_
    Got a bug or question? Log it here.

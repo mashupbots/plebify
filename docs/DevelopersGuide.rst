@@ -38,7 +38,7 @@ In response, the connector actor starts up a event actor to manage the subscript
 
 When an event fires, the event actor sends the job actor a message containing details of the event.
 
-To execute its task, the job actor then starts a job worker actor.  In this way, concurrent events can be 
+To execute its task, the job actor starts a job worker actor.  In this way, concurrent events can be 
 processed concurrently; i.e. more than one job worker actor may be running at the same time.
 
 A job worker actor executes tasks one at a time.  It does this by sending a message to the relevant
@@ -46,27 +46,13 @@ connector actor and waiting for a response.  The connector actor in turns instan
 to perform the actual work. In this way, the connector can execute many tasks concurrently; i.e. more than
 one task worker may be running at the same time.
 
-We choose the AKKA at the Actor Model framework to use because it has Apache Camel integration (in addition 
+We chose the Akka at the Actor Model framework because it has Apache Camel integration (in addition 
 to scalability, fault tolerance, etc... that you should expect from any framework you use). Using Akka Camel
 for events and triggers actors just seems to make sense to us.
 
-In going with AKKA, we decided to use its Scala interface because it looks cleaner and simpler and its Java
+In going with Akka, we decided to use its Scala interface because it looks cleaner and simpler and the Java
 one.
 
-Here are a few other nifty features of AKKA we used:
-
-- Easy to define and parse a `HOCON <https://github.com/typesafehub/config/blob/master/HOCON.md>`_ configuration 
-  file. See the ``org.mashupbots.plebify.config`` package.
-
-- Finite State Machine (FSM) are really handy for complex actors like the job work that has to wait for tasks to 
-  complete without blocking.
-
-- Scheduler makes it easy to scheduling message retries where there an error or a limit has been reached.
-
-- Futures, a non blocking way for actors to wait for messages, are nicely integrated. The result of futures can
-  be piped into an actor's message queue.
- 
-- The Microkernel is a quick and easy way to package and distribute your application.
 
 
 Building Plebify
@@ -80,6 +66,7 @@ Building Plebify
 - Run ``sbt clean dist`` from the plebify directory
 
 - The distribution can be found in the ``target/plebify-X.Y.Z`` directory.
+
 
 
 Setting up Eclipse
@@ -99,6 +86,7 @@ Setting up Eclipse
   - Select the ``plebify`` directory as the root
   - Select all sub projects
   - Click ``Finish``
+
 
 
 Running ScalaTests

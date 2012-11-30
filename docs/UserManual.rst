@@ -18,6 +18,16 @@ Download and Installation
   - ``.\start``
 
 
+
+Getting Started
+===============
+
+The best way to get started is by looking at the example configurations in ``~/plebify/examples``.
+
+Open up the ``.conf`` file for instructions and walkthroughs.
+
+
+
 Configuration
 =============
 
@@ -81,6 +91,10 @@ The file is split into 2 parts:
 Connectors
 ----------
 
+Connectors link Plebify to your system(s).
+
+Connectors are specified in the configuration file on the line starting with ``connectors =``.
+
 You can specify one or more connectors between the ``[ ]``.  Each connector must be enclosed by ``{ }`` 
 and separated by comma. Each connector setting must be on a new line.
 
@@ -107,6 +121,10 @@ and separated by comma. Each connector setting must be on a new line.
 
 Jobs
 ----
+
+Jobs subscribes to connector event(s). When an event fires, the job runs the specified connector task(s).
+
+Jobs are specified in the configuration file on the line starting with ``jobs =``.
 
 Like connectors, you can specify one or more jobs between the ``[ ]``.  Each job must be enclosed by ``{ }`` 
 and separated by comma. Each job setting must be on a new line.
@@ -147,15 +165,17 @@ and separated by comma. Each job setting must be on a new line.
 
 - **on**
 
-  Connection of events to subscribe to for this job.  See below for more details
+  Collection of events to subscribe to for this job.  See ""on Events" below for more details.
 
 - **do**
 
-  Connection of tasks to execute to for this job.  See below for more details
+  Collection of tasks to execute to for this job.  See "do Tasks" below for more details.
 
 
 on Events
 ---------
+
+This is a specification of the connector event(s) to which a job subscribes.
 
 You can specify one or more events between the ``[ ]``.  Each event must be enclosed by ``{ }`` 
 and separated by comma. Each event setting must be on a new line.
@@ -187,6 +207,8 @@ and separated by comma. Each event setting must be on a new line.
 
 do Tasks
 --------
+
+This is a specification of the connector task(s) that a job must execute when an event fires.
 
 You can specify one or more tasks between the ``[ ]``.  Each task must be enclosed by ``{ }`` 
 and separated by comma. Each task setting must be on a new line.

@@ -151,7 +151,7 @@ class Engine(val configName: String = "plebify") extends Actor
       self ! InitializeConnectors()
       goto(InitializingConnectors) using InitializationData(sender)
     case unknown =>
-      log.debug("Recieved message while Uninitialized: {}", unknown.toString)
+      log.debug("Received message while Uninitialized: {}", unknown.toString)
       if (sender != self) sender ! Uninitilized()
       stay
   }
@@ -171,7 +171,7 @@ class Engine(val configName: String = "plebify") extends Actor
     case Event(msg: akka.actor.Status.Failure, data: InitializationData) =>
       stop(FSM.Failure(new Error(s"Error while waiting for connector start futures. ${msg.cause.getMessage}", msg.cause)))
     case unknown =>
-      log.debug("Recieved unknown message while InitializingConnectors: {}", unknown.toString)
+      log.debug("Received unknown message while InitializingConnectors: {}", unknown.toString)
       if (sender != self) sender ! Uninitilized()
       stay
   }
@@ -190,7 +190,7 @@ class Engine(val configName: String = "plebify") extends Actor
     case Event(msg: akka.actor.Status.Failure, data: InitializationData) =>
       stop(FSM.Failure(new Error(s"Error while waiting for job start futures. ${msg.cause.getMessage}", msg.cause)))
     case unknown =>
-      log.debug("Recieved unknown message while InitializingJobs: {}", unknown.toString)
+      log.debug("Received unknown message while InitializingJobs: {}", unknown.toString)
       if (sender != self) sender ! Uninitilized()
       stay
   }

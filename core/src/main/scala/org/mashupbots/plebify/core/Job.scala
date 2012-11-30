@@ -152,7 +152,7 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
       self ! Subscribe()
       goto(Initializing) using InitializationData(sender)
     case unknown =>
-      log.debug("Recieved message while Uninitialised: {}", unknown.toString)
+      log.debug("Received message while Uninitialised: {}", unknown.toString)
       if (sender != self) sender ! Uninitilized()
       stay
   }
@@ -174,7 +174,7 @@ class Job(jobConfig: JobConfig) extends Actor with FSM[JobState, JobData] with a
       stop(FSM.Failure(new Error(s"Error while waiting for event subscription futures. ${msg.cause.getMessage}",
         msg.cause)))
     case unknown =>
-      log.debug("Recieved unknown message while Initializing: {}", unknown.toString)
+      log.debug("Received unknown message while Initializing: {}", unknown.toString)
       if (sender != self) sender ! Uninitilized()
       stay
   }
