@@ -8,6 +8,7 @@ We thought it might be useful to list some of the things we have learnt to share
 If you know of a better way, please let us know.
 
 
+
 Finite State Machine (FSM)
 ==========================
 
@@ -19,6 +20,7 @@ arriving. We've implemented it in several classes:
 - ``org.mashupbots.plebify.core.Job``
 - ``org.mashupbots.plebify.core.JobWorker``
 - ``org.mashupbots.plebify.db.SqlQueryEvent``
+
 
 
 Using futures to wait without blocking
@@ -91,8 +93,29 @@ Performed periodic work
 
 To perform periodic working, we setup a schedule to send a periodic message to an actor.
 
-See ``org.mashupbots.plebify.db.SqlQueryEvent`` where we send a message periodically to trigger
-the querying of an SQL database.
+See ``org.mashupbots.plebify.db.SqlQueryEvent`` where the actor sends a "tick" message to itself in order to
+periodically trigger querying of an SQL database.
+
+::
+
+  override def preStart() {
+    val worker = context.actorOf(Props(new SqlQueryEventWorker(connectorConfig, request)), "worker")
+    context.system.scheduler.schedule(initialDelay seconds, interval seconds, self, "tick")
+  }
+
+  when(Idle) {
+    case Event("tick", _) =>
+      log.debug(s"Running sql for '${request.config.jobId}-${request.config.index}'")
+      val worker = context.actorFor("worker")
+      val future = ask(worker, queryMessage)(sqlTimeout seconds).mapTo[CamelMessage]
+      future pipeTo self
+      goto(Active)
+    case unknown =>
+      log.debug("Received message while Idle: {}", unknown.toString)
+      stay
+  }
+
+We combined this with FSM so that a "tick" message when the actor is in an *Active* state is ignored.
 
 
 
@@ -143,13 +166,46 @@ Then we used ``akka-sbt-plugin`` to package it up in ``build.scala``.
       )
   )  
 
-Note that we used the ``outputDirectory``, ``distMainClass`` and ``distJvmOptions`` settings for ``AkkaKernelPlugin``.
+Note the ``outputDirectory``, ``distMainClass`` and ``distJvmOptions`` settings for ``AkkaKernelPlugin``.
 
 I also took us a while to find out how to extend the SBT ``dist`` task associated with ``AkkaKernelPlugin`` to 
 copy our examples over to the target directory.
 
+It was more SBT that anything else ... how to extend a task and access settings was obvious to us.
 
 
+
+For System integration, use Akka Camel
+======================================
+
+There are so many Camel actors out there - makes sense to use them.
+
+Here's a HTTP client to post to ``http://localhost:8877/test`` in 2 lines of code:
+
+::
+
+  class MyProducer extends Producer {
+    def endpointUri = "jetty:http://localhost:8877/test"
+  }
+
+Just send a message to it and it will be posted to the URL.
+
+Here's a HTTP server endpoint at ``http://localhost:9999/test``
+
+::
+
+  class MyConsumer extends Consumer {
+    def endpointUri = "jetty:http://localhost:9999/test"
+    def receive = {
+      case msg: CamelMessage => {
+        val body = if (msg.body != null) msg.bodyAs[String] else ""
+        if (body == "return error")
+          sender ! CamelMessage("", Map((Exchange.HTTP_RESPONSE_CODE, "500")))
+        else
+          sender ! "Hello"
+      }
+    }
+  }
 
 
 
