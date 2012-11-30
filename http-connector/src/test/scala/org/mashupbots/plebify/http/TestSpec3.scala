@@ -35,6 +35,7 @@ import scala.concurrent.duration.DurationInt
 import org.slf4j.LoggerFactory
 import akka.camel.AkkaCamelException
 import akka.actor.Status.Failure
+import akka.actor.PoisonPill
 
 class TestSpec3(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with WordSpec
   with MustMatchers {
@@ -79,13 +80,16 @@ class TestSpec3(_system: ActorSystem) extends TestKit(_system) with ImplicitSend
       expectMsgPF(5 seconds) {
         case m: CamelMessage => log.info("{}", m)
       }
+      
+      consumer ! PoisonPill
+      producer ! PoisonPill
     }
 
   }
 }
 
 class MyConsumer extends Consumer {
-  def endpointUri = "jetty:http://localhost:8877/test"
+  def endpointUri = "jetty:http://localhost:8111/test"
   def receive = {
     case msg: CamelMessage => {
       val body = if (msg.body != null) msg.bodyAs[String] else ""
@@ -98,6 +102,6 @@ class MyConsumer extends Consumer {
 }
 
 class MyProducer extends Producer {
-  def endpointUri = "jetty:http://localhost:8877/test"
+  def endpointUri = "jetty:http://localhost:8111/test"
 }
 

@@ -43,18 +43,20 @@ class TestSpec4 extends WordSpec with ShouldMatchers {
       system.actorOf(Props[MyWsConsumer])
 
       Thread.sleep(1000)
+      
+      system.shutdown()
     }
 
   }
 }
 
 class MyWsProducer extends Producer {
-  def endpointUri = "websocket://localhost:9998/consumer"
+  def endpointUri = "websocket://localhost:8222/consumer"
 
 }
 
 class MyWsConsumer extends Consumer {
-  def endpointUri = "websocket://localhost:9998/consumer"
+  def endpointUri = "websocket://localhost:8222/consumer"
 
   def receive = {
     case msg: CamelMessage => println(msg)
