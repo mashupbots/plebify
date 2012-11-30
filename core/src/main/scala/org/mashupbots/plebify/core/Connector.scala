@@ -65,11 +65,11 @@ trait DefaultConnector extends Actor with akka.actor.ActorLogging with Connector
    * Flag to determine if we should kill the task actor upon error.  If true, a `PoisoinPill` is sent to the
    * task actor if an error is received. It will be started again upon the next request.
    *
-   * Defaults to `true`.
+   * Defaults to `false`.
    *
    * We have found that an `AkkaCamelException` is thrown by Akka's Producer if there is an error.  This causes the
-   * producer actor to stop and restart. However, restarting somehow does not work properly because messages are not
-   * being sent.  This behaviour is present for camel-jetty
+   * producer actor to stop and restart. If restarting does not work, turning this on may help.
+   * See https://groups.google.com/forum/?fromgroups=#!topic/akka-user/AtKNTxicaBY
    */
   def killTaskActorOnFailure: Boolean = false
 

@@ -55,7 +55,7 @@ case class JobConfig(
    *
    * Defaults:
    *  - `description` = empty string
-   *  - `initialization-timeout` = 5 seconds
+   *  - `initialization-timeout` = 30 seconds
    *  - `max-worker-count` = 5 workers
    *  - `max-worker-strategy` = queue
    *  - `queue-size` = 100 messages
@@ -66,7 +66,7 @@ case class JobConfig(
   def this(config: Config) = this(
     config.getString("job-id"),
     ConfigUtil.getString(config, "description", ""),
-    ConfigUtil.getInt(config, "initialization-timeout", 5),
+    ConfigUtil.getInt(config, "initialization-timeout", 30),
     ConfigUtil.getInt(config, "max-worker-count", 5),
     MaxWorkerStrategy.withName(ConfigUtil.getString(config, "max-worker-strategy", "queue")),
     ConfigUtil.getInt(config, "queue-size", 100),
