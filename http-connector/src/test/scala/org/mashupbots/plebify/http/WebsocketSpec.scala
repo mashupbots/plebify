@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory
 import com.typesafe.config.ConfigFactory
 
 import akka.actor.ActorSystem
+import akka.actor.PoisonPill
 import akka.actor.Props
 import akka.camel.Producer
 import akka.testkit.ImplicitSender
@@ -97,6 +98,7 @@ class WebsocketSpec(_system: ActorSystem) extends TestKit(_system) with Implicit
       Thread.sleep(500)
       destWebsocket.messages.size must be (3)
       
+      engine ! PoisonPill      
     }
   }
 }

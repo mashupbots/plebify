@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory
 import com.typesafe.config.ConfigFactory
 
 import akka.actor.ActorSystem
+import akka.actor.PoisonPill
 import akka.actor.Props
 import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
@@ -76,6 +77,8 @@ class FileConnectorSpec(_system: ActorSystem) extends TestKit(_system) with Impl
       val outputFile = outputs(0)
       log.info("Output file {}", outputFile.getAbsolutePath())
       FileConnectorSpec.readTextFile(outputFile) must be(content)
+      
+      engine ! PoisonPill
     }
 
     "ignore files unless it contains the specified words" in {
@@ -95,6 +98,8 @@ class FileConnectorSpec(_system: ActorSystem) extends TestKit(_system) with Impl
 
       val outputs = FileConnectorSpec.ouputDir2.listFiles()
       outputs.size must be(1)
+      
+      engine ! PoisonPill
     }
 
     "ignore files unless it matches the specified regex pattern" in {
@@ -114,6 +119,8 @@ class FileConnectorSpec(_system: ActorSystem) extends TestKit(_system) with Impl
 
       val outputs = FileConnectorSpec.ouputDir3.listFiles()
       outputs.size must be(2)
+      
+      engine ! PoisonPill
     }
 
   }

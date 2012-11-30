@@ -92,11 +92,8 @@ Setting up Eclipse
 Running ScalaTests
 ==================
 
-We run scala tests from eclipse.  From ``sbt`` there are errors where ``scala.actors.Actors`` cannot be found.
-This is a temporary error with Scala 2.10 still being in RC and ScalaTest not fully updated (I think).
-
-Before you run the scalatest, you will need to setup `plebify-test-config.txt` in your home directory.  It needs
-to contain your credentials and other settings for access connector resources.
+Before you run the scalatest, you will need to create a `plebify-test-config.txt` in your home directory.  
+It needs to contain your credentials and other settings for accessing connector resources.
 
 ::
 

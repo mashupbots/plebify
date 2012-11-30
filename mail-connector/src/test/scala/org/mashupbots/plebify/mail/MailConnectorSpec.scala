@@ -15,12 +15,9 @@
 //
 package org.mashupbots.plebify.mail
 
-import java.nio.charset.Charset
-import java.nio.file.Files
-import java.nio.file.Paths
-import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
+
 import org.mashupbots.plebify.core.ConnectorFactory
 import org.mashupbots.plebify.core.Engine
 import org.mashupbots.plebify.core.EventData
@@ -31,20 +28,23 @@ import org.mashupbots.plebify.core.StartRequest
 import org.mashupbots.plebify.core.StartResponse
 import org.mashupbots.plebify.core.TaskExecutionRequest
 import org.mashupbots.plebify.core.TaskExecutionResponse
+import org.mashupbots.plebify.core.config.ConfigUtil
 import org.mashupbots.plebify.core.config.ConnectorConfig
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 import org.slf4j.LoggerFactory
+
 import com.typesafe.config.ConfigFactory
+
 import akka.actor.Actor
 import akka.actor.ActorContext
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
+import akka.actor.PoisonPill
 import akka.actor.Props
 import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
-import org.mashupbots.plebify.core.config.ConfigUtil
 
 /**
  * Tests for [[org.mashupbots.plebify.mail.MailConnector]]
@@ -110,7 +110,8 @@ class MailConnectorSpec(_system: ActorSystem) extends TestKit(_system) with Impl
           rList.exists(r => r.eventNotification.data(EventData.Content).contains("this is some data to send")) must be(true)
         }
       }
-
+      
+      engine ! PoisonPill
     }
 
   }

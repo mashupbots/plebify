@@ -15,40 +15,29 @@
 //
 package org.mashupbots.plebify.db
 
-import java.nio.charset.Charset
-import java.nio.file.Files
-import java.nio.file.Paths
-import scala.collection.JavaConversions._
+import java.sql.ResultSet
+import java.sql.Statement
+
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
-import org.mashupbots.plebify.core.ConnectorFactory
+
+import org.apache.commons.dbcp.BasicDataSource
 import org.mashupbots.plebify.core.Engine
-import org.mashupbots.plebify.core.EventData
-import org.mashupbots.plebify.core.EventNotification
-import org.mashupbots.plebify.core.EventSubscriptionRequest
-import org.mashupbots.plebify.core.EventSubscriptionResponse
 import org.mashupbots.plebify.core.StartRequest
 import org.mashupbots.plebify.core.StartResponse
-import org.mashupbots.plebify.core.TaskExecutionRequest
-import org.mashupbots.plebify.core.TaskExecutionResponse
-import org.mashupbots.plebify.core.config.ConnectorConfig
+import org.mashupbots.plebify.core.config.ConfigUtil
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.WordSpec
 import org.scalatest.matchers.MustMatchers
 import org.slf4j.LoggerFactory
+
 import com.typesafe.config.ConfigFactory
-import akka.actor.Actor
-import akka.actor.ActorContext
-import akka.actor.ActorRef
+
 import akka.actor.ActorSystem
+import akka.actor.PoisonPill
 import akka.actor.Props
 import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
-import org.mashupbots.plebify.core.config.ConfigUtil
-import java.sql.Connection
-import org.apache.commons.dbcp.BasicDataSource
-import java.sql.Statement
-import java.sql.ResultSet
 
 /**
  * Tests for [[org.mashupbots.plebify.mail.DbConnector]]
@@ -134,6 +123,8 @@ class DbConnectorSpec(_system: ActorSystem) extends TestKit(_system) with Implic
       rB.size must be(1)
       rB(0)("code") must be ("aaa") 
       rB(0)("digits") must be (1) 
+      
+      engine ! PoisonPill
     }
 
   }

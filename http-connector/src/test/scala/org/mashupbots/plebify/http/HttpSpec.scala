@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory
 import com.typesafe.config.ConfigFactory
 
 import akka.actor.ActorSystem
+import akka.actor.PoisonPill
 import akka.actor.Props
 import akka.camel.CamelMessage
 import akka.camel.CamelMessage
@@ -114,6 +115,8 @@ class HttpSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSende
           m.size must be(6) // 2 from previous test, and 4 from this test (1 initial and 3 resends)
         }
       }
+      
+      engine ! PoisonPill
     }
 
   }
