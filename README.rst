@@ -11,7 +11,7 @@ Most large applications that we've worked on have associated manual tasks such a
 
 - checking log files for errors
 - running queries and emailing out the results
-- consoliation files from various systems for batch upload
+- consolidate files from various systems for batch upload
 
 Due to resource and budget constraints, these tasks never get automated.  Rather, they 
 tend to get delegated to `Plebs <http://en.wikipedia.org/wiki/Plebs>`_.  The lower you are in 
@@ -43,39 +43,39 @@ Quick Install
 
   - Edit ``~/plebify/config/application.conf``. 
 
-    See examples in ``~/plebify/examples`` for inspriation. Instruction for running the examples 
-    are contained within each example ``.conf`` file.
-
-    - ``db-sink.application.conf``
-
-       Illustrates picking up data from a web server, the file system and an email server; and write 
-       it into a database table.
-
-    - ``file-copy.application.conf``
-
-      Illustrates setting up a job to move files from /tmp/dir1 to /tmp/dir2
+    See examples in ``~/plebify/examples`` for inspiration. Step by step walkthrough instructions are 
+    contained within each example ``.conf`` file.
 
     - ``http-broadcast.application.conf``
 
-      Illustrates how to broadcast HTTP requests to: other HTTP endpoints, a websocket server,
-      an email account and also to the file system.
+      Broadcast HTTP requests to: other HTTP endpoints, a websocket server, an email account and also 
+      to the file system.
+
+    - ``db-sink.application.conf``
+
+      Pick up data from a web server, the file system and an email server; and write 
+      it into a database table.
+
+    - ``file-copy.application.conf``
+
+      Move files from /tmp/dir1 to /tmp/dir2
     
 
   - Review logging configuration in ``~/plebify/config/logback.xml``.
 
-    - By default, Plebify output to the ``stdout`` and a file in the ``~/plebify/logs`` directory
+    - By default, Plebify output to ``stdout`` and a file in the ``~/plebify/logs`` directory
     - To change, refer to `Logback <http://logback.qos.ch/documentation.html>`_ documentation.
 
 - Run
 
-  - ``cd ~/plbefiy/bin``
+  - ``cd ~/plebify/bin``
   - ``./start`` for unix or ``./start.bat`` for windows.
 
 
 
 Road Map
 ========
-We would consider Plebify as being in "alpha" and usable for non-critial purposes.
+We would consider Plebify as being in "alpha" and usable for non-critical purposes.
 
 Currently, Plebify is only customisable via its configuration files.  It is envisaged that, eventually, 
 a web based configuration will be available.  Changes will take effect immediately and Plebify will

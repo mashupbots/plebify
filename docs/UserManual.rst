@@ -1,30 +1,47 @@
 Plebify User Manual
 *******************
 
-Installation
-============
-- `Download <https://github.com/mashupbots/plebify/downloads>`_
+Quick Install
+=============
 
-- Unzip the package into ``~/plebify`` (for example)
+- Install `Java 7 <http://openjdk.java.net/install/>`_.
+
+- Download `Plebify <https://github.com/mashupbots/plebify/downloads>`_
+
+- Unzip into ``~/plebify`` (for example)
 
 - Configure
 
-  - Edit ``~/plebify/config/application.conf``. See examples in ``~/plebify/examples`` for inspriation.
+  - Edit ``~/plebify/config/application.conf``. 
+
+    See examples in ``~/plebify/examples`` for inspiration. Step by step walkthrough instructions are 
+    contained within each example ``.conf`` file.
+
+    - ``http-broadcast.application.conf``
+
+      Broadcast HTTP requests to: other HTTP endpoints, a websocket server, an email account and also 
+      to the file system.
+
+    - ``db-sink.application.conf``
+
+      Pick up data from a web server, the file system and an email server; and write 
+      it into a database table.
+
+    - ``file-copy.application.conf``
+
+      Move files from /tmp/dir1 to /tmp/dir2
+    
+
   - Review logging configuration in ``~/plebify/config/logback.xml``.
+
+    - By default, Plebify output to ``stdout`` and a file in the ``~/plebify/logs`` directory
+    - To change, refer to `Logback <http://logback.qos.ch/documentation.html>`_ documentation.
 
 - Run
 
-  - ``cd ~\plbefiy\bin``
-  - ``.\start``
+  - ``cd ~/plebify/bin``
+  - ``./start`` for unix or ``./start.bat`` for windows.
 
-
-
-Getting Started
-===============
-
-The best way to get started is by looking at the example configurations in ``~/plebify/examples``.
-
-Open up the ``.conf`` file for instructions and walkthroughs.
 
 
 
