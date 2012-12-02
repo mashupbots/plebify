@@ -30,6 +30,49 @@ For example:
 
 
 
+Quick Install
+=============
+
+- Install `Java 7 <http://openjdk.java.net/install/>`_.
+
+- Download `Plebify <https://github.com/mashupbots/plebify/downloads>`_
+
+- Unzip into ``~/plebify`` (for example)
+
+- Configure
+
+  - Edit ``~/plebify/config/application.conf``. 
+
+    See examples in ``~/plebify/examples`` for inspriation. Instruction for running the examples 
+    are contained within each example ``.conf`` file.
+
+    - ``db-sink.application.conf``
+
+       Illustrates picking up data from a web server, the file system and an email server; and write 
+       it into a database table.
+
+    - ``file-copy.application.conf``
+
+      Illustrates setting up a job to move files from /tmp/dir1 to /tmp/dir2
+
+    - ``http-broadcast.application.conf``
+
+      Illustrates how to broadcast HTTP requests to: other HTTP endpoints, a websocket server,
+      an email account and also to the file system.
+    
+
+  - Review logging configuration in ``~/plebify/config/logback.xml``.
+
+    - By default, Plebify output to the ``stdout`` and a file in the ``~/plebify/logs`` directory
+    - To change, refer to `Logback <http://logback.qos.ch/documentation.html>`_ documentation.
+
+- Run
+
+  - ``cd ~/plbefiy/bin``
+  - ``./start`` for unix or ``./start.bat`` for windows.
+
+
+
 Road Map
 ========
 We would consider Plebify as being in "alpha" and usable for non-critial purposes.

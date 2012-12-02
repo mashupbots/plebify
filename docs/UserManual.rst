@@ -1,8 +1,8 @@
 Plebify User Manual
 *******************
 
-Download and Installation
-=========================
+Installation
+============
 - `Download <https://github.com/mashupbots/plebify/downloads>`_
 
 - Unzip the package into ``~/plebify`` (for example)
