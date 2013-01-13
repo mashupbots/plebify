@@ -17,7 +17,7 @@ import java.io.File
 //
 object PlebifyBuild extends Build {
 
-  val plebifyVersion = "0.1.0"
+  val plebifyVersion = "0.2"
 
   //
   // Settings
@@ -26,7 +26,7 @@ object PlebifyBuild extends Build {
     // Build
     organization := "org.mashupbots.plebify",
     version      := plebifyVersion,
-    scalaVersion := "2.10.0-RC3",
+    scalaVersion := "2.10.0",
     organizationHomepage := Some(url("https://github.com/mashupbots/plebify")),
 
     // Repositories
@@ -246,19 +246,19 @@ object Dependencies {
 object Dependency {
   object V {
     // Dont' forget to change the akka version in plugins.sbt too!
-    val Akka         = "2.1.0-RC3"
+    val Akka         = "2.1.0"
 
     // Akka 2.1 uses camel 2.10
     val Camel        =  "2.10.0"
   }
 
-  val akkaKernel     = "com.typesafe.akka" %% "akka-kernel"       % V.Akka cross CrossVersion.full  
-  val akkaActor      = "com.typesafe.akka" %% "akka-actor"        % V.Akka cross CrossVersion.full
-  val akkaCamel      = "com.typesafe.akka" %% "akka-camel"        % V.Akka cross CrossVersion.full
-  val akkaSlf4j      = "com.typesafe.akka" %% "akka-slf4j"        % V.Akka cross CrossVersion.full
-  val akkaTestKit    = "com.typesafe.akka" %% "akka-testkit"      % V.Akka     % "test" cross CrossVersion.full
-  val logback        = "ch.qos.logback"    % "logback-classic"    % "1.0.3"
-  val scalatest      = "org.scalatest"     %% "scalatest"         % "2.0.M5-B1"   % "test" cross CrossVersion.full
+  val akkaKernel     = "com.typesafe.akka" %% "akka-kernel"       % V.Akka
+  val akkaActor      = "com.typesafe.akka" %% "akka-actor"        % V.Akka
+  val akkaCamel      = "com.typesafe.akka" %% "akka-camel"        % V.Akka
+  val akkaSlf4j      = "com.typesafe.akka" %% "akka-slf4j"        % V.Akka
+  val akkaTestKit    = "com.typesafe.akka" %% "akka-testkit"      % V.Akka % "test"
+  val logback        = "ch.qos.logback"    % "logback-classic"    % "1.0.9"
+  val scalatest      = "org.scalatest"     % "scalatest_2.10"     % "2.0.M5b" % "test"
   
   val camelJetty     = "org.apache.camel"  % "camel-jetty"        % V.Camel
   val camelWebSocket = "org.apache.camel"  % "camel-websocket"    % V.Camel
